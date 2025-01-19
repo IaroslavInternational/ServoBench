@@ -39,8 +39,45 @@ UI::UI()
 	LOG_END();
 }
 
-void UI::render()
+void UI::Render()
 {
-	ImGui::Begin("Test wnd");
+	ShowConnectionSettings();
+}
+
+void UI::ShowConnectionSettings()
+{
+	if (ImGui::Begin("Подключение"))
+	{
+	    auto ports = getAvailablePorts();
+
+		for (auto& p : ports)
+		{
+			ImGui::Text((std::string("COM") + std::to_string(p)).c_str());
+		}
+	}
+
 	ImGui::End();
+}
+
+std::list<int> UI::getAvailablePorts()
+{
+	wchar_t lpTargetPath[5000];
+	std::list<int> portList;
+
+	for (int i = 0; i < 255; i++)
+	{
+		std::wstring str = L"COM" + std::to_wstring(i);
+		DWORD res = QueryDosDevice(str.c_str(), lpTargetPath, 5000);
+
+		if (res != 0) 
+		{
+			portList.push_back(i);
+		}
+		if (::GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+		{
+			throw std::exception("run out of ports buffer");
+		}
+	}
+
+	return portList;
 }

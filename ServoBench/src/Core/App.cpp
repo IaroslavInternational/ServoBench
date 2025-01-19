@@ -9,8 +9,6 @@ App::App(const std::wstring& name, int x, int y)
 void App::Go()
 {
 	wnd.BeginFrame();
-
-	// gui code
-
+	ui.render();
 	wnd.EndFrame();
 }

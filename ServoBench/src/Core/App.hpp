@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Window.hpp"
+#include "../UI.hpp"
 
 class App
 {
@@ -10,5 +11,6 @@ public:
 	void Go();
 private:
 	Window wnd;
+	UI ui;
 };
 

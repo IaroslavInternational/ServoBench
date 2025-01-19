@@ -1,6 +1,8 @@
 #include "Window.hpp"
 
 #include <tchar.h>
+#include <atlstr.h>
+#include "../CoreLog.hpp"
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -13,7 +15,7 @@ Window::Window(const std::wstring& name, int x, int y)
     //ImGui_ImplWin32_EnableDpiAwareness();
     wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
     ::RegisterClassExW(&wc);
-    hwnd = ::CreateWindowW(wc.lpszClassName, name.c_str(), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    hwnd = ::CreateWindowW(wc.lpszClassName, name.c_str(), (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX), 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize Direct3D
     if (!CreateDeviceD3D())
@@ -21,6 +23,20 @@ Window::Window(const std::wstring& name, int x, int y)
         CleanupDeviceD3D();
         ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
         throw std::exception("NO D3D");
+    }
+
+    // Windows 11 style
+    {
+    #define DWMWA_BORDER_COLOR DWORD(34)
+    #define DWMWA_CAPTION_COLOR DWORD(35)
+
+        const auto DWMSBT_MAINWINDOW = 2; // Mica style
+        auto caption = RGB(36, 36, 36);
+        auto border = RGB(255 / 2, 255 / 2, 255 / 2);
+
+        DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &caption, sizeof(COLORREF));
+        DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, &border, sizeof(COLORREF));
+        DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &DWMSBT_MAINWINDOW, sizeof(int));
     }
 
     // Show the window
@@ -40,6 +56,21 @@ Window::Window(const std::wstring& name, int x, int y)
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+
+    ImGui::GetIO().Fonts->AddFontFromFileTTF("Fonts/segoeui.ttf", 18.0f, NULL, ImGui::GetIO().Fonts->GetGlyphRangesCyrillic());
+
+    LOG_H("Window");
+    LOG("Created window\n");
+    LOG("Size: ");
+    LOG(x);
+    LOG('x');
+    LOG(y);
+    LOG('\n');
+
+    LOG("Name: ");
+    LOG(CW2A(name.c_str()));
+
+    LOG_END();
 }
 
 Window::~Window()
@@ -74,15 +105,6 @@ void Window::BeginFrame()
     }
     g_SwapChainOccluded = false;
 
-    // Handle window resize (we don't resize directly in the WM_SIZE handler)
-    if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
-    {
-        CleanupRenderTarget();
-        g_pSwapChain->ResizeBuffers(0, g_ResizeWidth, g_ResizeHeight, DXGI_FORMAT_UNKNOWN, 0);
-        g_ResizeWidth = g_ResizeHeight = 0;
-        CreateRenderTarget();
-    }
-
     // Start the Dear ImGui frame
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -91,7 +113,7 @@ void Window::BeginFrame()
 
 void Window::EndFrame()
 {
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 clear_color = ImVec4(17.0f / 255.0f, 17.0f / 255.0f, 17.0f / 255.0f, 1.00f);
     // Rendering
     ImGui::Render();
     const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };

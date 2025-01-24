@@ -1,6 +1,7 @@
 #include "UI.hpp"
 
 #include "CoreLog.hpp"
+#include "Core/data_types.hpp"
 
 #pragma execution_character_set("utf-8")  // Для отображения на русском языке
 
@@ -35,24 +36,109 @@ UI::UI()
 
 	LOG_H("UI");
 	LOG("Colors are set\n");
-
 	LOG_END();
 }
 
 void UI::Render()
 {
 	ShowConnectionSettings();
+
+	/* {
+		if (ImGui::Begin("Debug wnd"))
+		{
+			if (ImGui::Button("Init"))
+			{
+				h_Serial = CreateFile(L"COM4", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
+					FILE_ATTRIBUTE_NORMAL, 0);
+				if (h_Serial == INVALID_HANDLE_VALUE) {
+					if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+						// serial port not found. Handle error here.
+						LOG("no port\n");
+					}
+					// any other error. Handle error here.
+					LOG("UNK err\n");
+				}
+
+				DCB dcbSerialParam = { 0 };
+				dcbSerialParam.DCBlength = sizeof(dcbSerialParam);
+
+				if (!GetCommState(h_Serial, &dcbSerialParam)) {
+					// handle error here
+					LOG("err get com state\n");
+				}
+
+				dcbSerialParam.BaudRate = CBR_9600;
+				dcbSerialParam.ByteSize = 8;
+				dcbSerialParam.StopBits = ONESTOPBIT;
+				dcbSerialParam.Parity = NOPARITY;
+
+				if (!SetCommState(h_Serial, &dcbSerialParam)) {
+					// handle error here
+					LOG("err set com state\n");
+				}
+
+				COMMTIMEOUTS timeouts = { 0 };
+				// Set COM port timeout settings
+				timeouts.ReadIntervalTimeout = 10;
+				timeouts.ReadTotalTimeoutConstant = 50;
+				timeouts.ReadTotalTimeoutMultiplier = 10;
+				timeouts.WriteTotalTimeoutConstant = 50;
+				timeouts.WriteTotalTimeoutMultiplier = 10;
+				if (SetCommTimeouts(h_Serial, &timeouts) == 0)
+				{
+					LOG("Err timeouts\n");
+					CloseHandle(h_Serial);
+				}
+			}
+
+			if (ImGui::Button("Send"))
+			{
+				char sBuff[] = "rdf";
+				DWORD dwSent = 0;
+				WriteFile(h_Serial, sBuff, 4, &dwSent, NULL);
+			}
+		}
+
+		ImGui::End();
+	}*/
 }
 
 void UI::ShowConnectionSettings()
 {
 	if (ImGui::Begin("Подключение"))
 	{
-	    auto ports = getAvailablePorts();
+		auto ports = getAvailablePorts();
+		
+		if (ports.size() > selected.size())
+		{
+			selected.resize(ports.size());
+		}
+	
+		size_t i = 0;
+		static std::string currentName = "";
 
 		for (auto& p : ports)
 		{
-			ImGui::Text((std::string("COM") + std::to_string(p)).c_str());
+			currentName = std::string("COM") + std::to_string(p);
+			if (ImGui::Selectable(currentName.c_str(), selected[i]))
+			{
+				for (auto s : selected)
+				{
+					s = false;
+				}
+
+				selected[i] = true;
+			}
+
+			if (selected[i]) 
+			{
+				if (ImGui::Button("Подключить"))
+				{
+					port.Open(currentName);
+				}
+			}
+
+			i++;
 		}
 	}
 
@@ -72,10 +158,6 @@ std::list<int> UI::getAvailablePorts()
 		if (res != 0) 
 		{
 			portList.push_back(i);
-		}
-		if (::GetLastError() == ERROR_INSUFFICIENT_BUFFER)
-		{
-			throw std::exception("run out of ports buffer");
 		}
 	}
 

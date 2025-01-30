@@ -43,64 +43,26 @@ void UI::Render()
 {
 	ShowConnectionSettings();
 
-	/* {
+	 {
 		if (ImGui::Begin("Debug wnd"))
 		{
-			if (ImGui::Button("Init"))
-			{
-				h_Serial = CreateFile(L"COM4", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING,
-					FILE_ATTRIBUTE_NORMAL, 0);
-				if (h_Serial == INVALID_HANDLE_VALUE) {
-					if (GetLastError() == ERROR_FILE_NOT_FOUND) {
-						// serial port not found. Handle error here.
-						LOG("no port\n");
-					}
-					// any other error. Handle error here.
-					LOG("UNK err\n");
-				}
-
-				DCB dcbSerialParam = { 0 };
-				dcbSerialParam.DCBlength = sizeof(dcbSerialParam);
-
-				if (!GetCommState(h_Serial, &dcbSerialParam)) {
-					// handle error here
-					LOG("err get com state\n");
-				}
-
-				dcbSerialParam.BaudRate = CBR_9600;
-				dcbSerialParam.ByteSize = 8;
-				dcbSerialParam.StopBits = ONESTOPBIT;
-				dcbSerialParam.Parity = NOPARITY;
-
-				if (!SetCommState(h_Serial, &dcbSerialParam)) {
-					// handle error here
-					LOG("err set com state\n");
-				}
-
-				COMMTIMEOUTS timeouts = { 0 };
-				// Set COM port timeout settings
-				timeouts.ReadIntervalTimeout = 10;
-				timeouts.ReadTotalTimeoutConstant = 50;
-				timeouts.ReadTotalTimeoutMultiplier = 10;
-				timeouts.WriteTotalTimeoutConstant = 50;
-				timeouts.WriteTotalTimeoutMultiplier = 10;
-				if (SetCommTimeouts(h_Serial, &timeouts) == 0)
-				{
-					LOG("Err timeouts\n");
-					CloseHandle(h_Serial);
-				}
-			}
+			static signed char txt[20];
+			ImGui::InputText("Data", (char*)txt, 20);
 
 			if (ImGui::Button("Send"))
 			{
-				char sBuff[] = "rdf";
-				DWORD dwSent = 0;
-				WriteFile(h_Serial, sBuff, 4, &dwSent, NULL);
+				port.TxData(txt);
+			}
+
+			if (ImGui::Button("Rx"))
+			{
+				port.ClearBuffer();
+				RxThread = std::async(std::launch::async, &UI::ReceiveData, this);
 			}
 		}
 
 		ImGui::End();
-	}*/
+	}
 }
 
 void UI::ShowConnectionSettings()
@@ -162,4 +124,22 @@ std::list<int> UI::getAvailablePorts()
 	}
 
 	return portList;
+}
+
+void UI::ReceiveData()
+{
+	while(!false)
+	{
+		DataProc(port.RxData());
+	}
+}
+
+void UI::DataProc(buffer_t* pData)
+{
+	if (pData == nullptr)
+	{
+		return;
+	}
+
+	tasks.push(std::string(pData->begin(), pData->end()));
 }

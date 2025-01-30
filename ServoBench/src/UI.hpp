@@ -5,6 +5,8 @@
 
 #include <list>
 #include <vector>
+#include <queue>
+#include <future>
 
 class UI
 {
@@ -16,7 +18,13 @@ private:
 	void ShowConnectionSettings();
 private:
 	std::list<int> getAvailablePorts();
+	void		   ReceiveData();
+	void		   DataProc(buffer_t* pData);
 private:
 	ComPort port;
+	std::future<void> RxThread;
+
 	std::vector<bool> selected;
+
+	std::queue<std::string> tasks;
 };

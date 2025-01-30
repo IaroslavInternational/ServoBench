@@ -11,6 +11,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 Window::Window(const std::wstring& name, int x, int y)
 {
+    LOG_H("Window");
+
     // Create application window
     //ImGui_ImplWin32_EnableDpiAwareness();
     wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
@@ -59,16 +61,9 @@ Window::Window(const std::wstring& name, int x, int y)
 
     ImGui::GetIO().Fonts->AddFontFromFileTTF("Fonts/segoeui.ttf", 18.0f, NULL, ImGui::GetIO().Fonts->GetGlyphRangesCyrillic());
 
-    LOG_H("Window");
-    LOG("Created window\n");
-    LOG("Size: ");
-    LOG(x);
-    LOG('x');
-    LOG(y);
-    LOG('\n');
-
-    LOG("Name: ");
-    LOG(CW2A(name.c_str()));
+    LOG("Create window:\n");
+    LOG_T("Size", std::to_string(x) + "x" + std::to_string(y));
+    LOG_T("Name", CW2A(name.c_str()));
 
     LOG_END();
 }

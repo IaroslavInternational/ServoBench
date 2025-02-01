@@ -26,5 +26,5 @@ private:
 
 	std::vector<bool> selected;
 
-	std::queue<std::string> tasks;
+	task_list_t tasks;
 };

@@ -44,6 +44,7 @@ void UI::Render()
 	ShowConnectionSettings();
 
 	 {
+		static uint64_t i = 0;
 		if (ImGui::Begin("Debug wnd"))
 		{
 			static signed char txt[20];
@@ -58,6 +59,24 @@ void UI::Render()
 			{
 				port.ClearBuffer();
 				RxThread = std::async(std::launch::async, &UI::ReceiveData, this);
+			}
+
+			if (ImGui::Button("Clr"))
+			{
+				tasks.clear();
+			}
+		}
+
+		ImGui::End();
+
+		if (ImGui::Begin("Tasks"))
+		{
+			if (!tasks.empty())
+			{
+				for (uint64_t i = 0; i < tasks.size(); i++)
+				{
+					ImGui::Text((std::to_string(i) + ") " + tasks[i]).c_str());
+				}
 			}
 		}
 
@@ -141,5 +160,12 @@ void UI::DataProc(buffer_t* pData)
 		return;
 	}
 
-	tasks.push(std::string(pData->begin(), pData->end()));
+	static const std::string splitter = "\r\n";
+	std::string data(pData->begin(), pData->end());
+
+	while (data.find(splitter) != -1)
+	{
+		tasks.push_back(std::string(data.begin(), data.begin() + data.find(splitter)));
+		data = std::string(data.begin() + data.find(splitter) + splitter.size(), data.end());
+	}
 }

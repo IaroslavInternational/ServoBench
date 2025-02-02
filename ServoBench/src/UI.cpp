@@ -162,7 +162,7 @@ void UI::DataProc(buffer_t* pData)
 
 	static const std::string splitter = "\r\n";
 	std::string data(pData->begin(), pData->end());
-
+	
 	while (data.find(splitter) != -1)
 	{
 		tasks.push_back(std::string(data.begin(), data.begin() + data.find(splitter)));

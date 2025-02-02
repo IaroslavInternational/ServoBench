@@ -12,9 +12,10 @@
 #define LOG_END() LOG("\n\n")
 
 #else
-#define __FILENAME__
 #define LOG(data) 
-#define LOG_T(data) 
+#define LOG_T(header, data)
+#define LOG_TM(header, data)
+#define LOG_ERR(data)
 #define LOG_H(header) 
 #define LOG_END()
 #endif

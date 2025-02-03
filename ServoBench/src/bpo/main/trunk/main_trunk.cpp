@@ -9,20 +9,21 @@
 typedef unsigned char      uint8_t;
 typedef unsigned long long uint64_t;
 
-#define SPLITTER String(":")
-#define OUTPORT(header, data) Serial.println(String(header) + SPLITTER + String(data))
+#define SPLITTER ":"
+#define OUTPORT(header, data) Serial.println(String(header) + String(SPLITTER) + String(data))
 
+#define _100ms  100   // 100 мс
 #define _500ms  500   // 500 мс
 #define _1000ms 1000  // 1000 мс
 #define _2000ms 2000  // 2000 мс
 #define _5000ms 5000  // 5000 мс
 
-// Структура потока
-struct thread
+// Структура диспетчера
+struct dispatch
 {
     // period - период выполнения функции action,
     // action - функция для выполнения по таймеру
-    thread(uint16_t period = 100, void (*action) () = nullptr)
+    dispatch(uint16_t period = 100, void (*action) () = nullptr)
         :
         period(period),
         action(action)
@@ -50,24 +51,29 @@ struct thread
     void     (*action) ();
 };
 
+String GetRandom(int min, int max)
+{
+    return String(random(min, max));
+}
+
 /* БЛОК ПОЛУЧЕНИЯ И ВЫДАЧИ ДАННЫХ */
 
 // Функция выдачи данных о температуре
 void EchoTemperature()
 {
-    OUTPORT("T", "23.0");
+    OUTPORT("T", GetRandom(20, 22));
 }
 
 // Функция выдачи данных о напряжении
 void EchoVoltage()
 {
-    OUTPORT("V", "12.0");
+    OUTPORT("V", GetRandom(8, 22));
 }
 
 // Функция выдачи данных о токе
 void EchoCurrent()
 {
-    OUTPORT("C", "1.0");
+    OUTPORT("C", GetRandom(1, 5));
 }
 
 /**********************************/
@@ -97,20 +103,26 @@ void disp_5000ms()
 
 void setup()
 {
+    randomSeed(analogRead(0)); // Debug random seed
+
+    // Настройка порта передачи данных
     Serial.begin(9600);
     Serial.setTimeout(10);
 
-    // Эмуляция потоков данных
-    thread workers[3];
-    workers[0] = thread(_500ms,  &disp_500ms); 
-    workers[1] = thread(_1000ms, &disp_1000ms);
-    workers[2] = thread(_5000ms, &disp_5000ms);
+    // Диспетчеры
+    dispatch dsps[3];
 
+    // Эмуляция потоков данных
+    dsps[0] = dispatch(_500ms,  &disp_500ms);
+    dsps[1] = dispatch(_1000ms, &disp_1000ms);
+    dsps[2] = dispatch(_5000ms, &disp_5000ms);
+
+    // Основной цикл
     while (!false)
     {
-        for (uint8_t i = 0; i < 2; i++)
+        for (uint8_t i = 0; i < 3; i++)
         {
-            workers[i].go();
+            dsps[i].go();
         }
     }
 }

@@ -52,32 +52,25 @@ void UI::Render()
 
 			if (ImGui::Button("Send"))
 			{
-				port.TxData(txt);
+				CmdThread = std::async(std::launch::async, &UI::GetCmd, this);
+				//port.TxData(txt);
 			}
 
 			if (ImGui::Button("Rx"))
 			{
 				port.ClearBuffer();
-				RxThread = std::async(std::launch::async, &UI::ReceiveData, this);
-			}
-
-			if (ImGui::Button("Clr"))
-			{
-				tasks.clear();
+				RxThread  = std::async(std::launch::async, &UI::ReceiveData, this);
+				
+				
 			}
 		}
 
 		ImGui::End();
 
-		if (ImGui::Begin("Tasks"))
+		if (ImGui::Begin("Data"))
 		{
-			if (!tasks.empty())
-			{
-				for (uint64_t i = 0; i < tasks.size(); i++)
-				{
-					ImGui::Text((std::to_string(i) + ") " + tasks[i]).c_str());
-				}
-			}
+			if (!temperature.empty())
+				ImGui::Text(std::to_string(temperature.back()).c_str());
 		}
 
 		ImGui::End();
@@ -165,7 +158,38 @@ void UI::DataProc(buffer_t* pData)
 	
 	while (data.find(splitter) != -1)
 	{
-		tasks.push_back(std::string(data.begin(), data.begin() + data.find(splitter)));
+		tasks.emplace(data.begin(), data.begin() + data.find(splitter));
 		data = std::string(data.begin() + data.find(splitter) + splitter.size(), data.end());
+	}
+}
+
+void UI::GetCmd()
+{
+	std::string cmd;
+	
+	while (!false)
+	{
+		if (!tasks.empty())
+		{
+			auto& cmd = tasks.front();
+
+			if (cmd.find("T") != -1)
+			{
+				cmd = std::string(cmd.begin() + 2, cmd.end());
+
+				if (temperature.size() > 50)
+				{
+					temperature.clear();
+				}
+
+				temperature.emplace_back(std::stoi(cmd));
+
+				tasks.pop();
+			}
+			else
+			{
+				tasks.pop(); // force pop of uncorrect cmd
+			}
+		}
 	}
 }

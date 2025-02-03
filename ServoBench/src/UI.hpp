@@ -20,11 +20,13 @@ private:
 	std::list<int> getAvailablePorts();
 	void		   ReceiveData();
 	void		   DataProc(buffer_t* pData);
+	void		   GetCmd();
 private:
-	ComPort port;
-	std::future<void> RxThread;
-
-	std::vector<bool> selected;
-
-	task_list_t tasks;
+	ComPort port;				 // Порт
+	std::future<void> RxThread;  // Асинхронный поток приёма данных
+	std::future<void> CmdThread;  // Асинхронный поток обработки данных
+	std::vector<bool> selected;  // Выбранный индекс порта
+	task_list_t tasks;			 // Список команд
+private:
+	std::vector<int16_t> temperature;
 };

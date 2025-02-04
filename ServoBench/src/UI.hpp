@@ -9,6 +9,8 @@
 #include <future>
 #include <mutex>
 
+#include "Sensor.hpp"
+
 class UI
 {
 public:
@@ -24,11 +26,13 @@ private:
 	void		   GetCmd();
 private:
 	ComPort port;				 // Порт
-	std::mutex mtx;
+	std::mutex mtx;				 // Mutex для управления tasks
 	std::future<void> RxThread;  // Асинхронный поток приёма данных
-	std::future<void> CmdThread;  // Асинхронный поток обработки данных
+	std::future<void> CmdThread; // Асинхронный поток обработки данных
 	std::vector<bool> selected;  // Выбранный индекс порта
 	task_list_t tasks;			 // Список команд
 private:
-	std::vector<int16_t> temperature = {};
+	Sensor<int16_t> temperature;
+	Sensor<int16_t> current;
+	Sensor<int16_t> voltage;
 };

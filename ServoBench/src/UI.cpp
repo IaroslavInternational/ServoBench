@@ -5,9 +5,23 @@
 
 #pragma execution_character_set("utf-8")  // Для отображения на русском языке
 
+/* CODE GEN */
+
+#define PLOT_SENSOR(sensor, units) \
+if (!sensor.IsEmpty())      \
+{\
+	ImPlot::PlotLine((sensor.GetName() + " " + units).c_str(), sensor.Get(), sensor.GetLimit());\
+}
+
+/************/
+
 using namespace std::literals::chrono_literals;
 
 UI::UI()
+	:
+	temperature("Температура", "T"),
+	current("Ток", "C"),
+	voltage("Напряжение", "V")
 {
 	ImGui::GetStyle().WindowBorderSize = 0.0f;
 	ImGui::GetStyle().TabBorderSize = 1.0f;
@@ -54,8 +68,7 @@ void UI::Render()
 
 			if (ImGui::Button("Send"))
 			{
-				//CmdThread = std::async(std::launch::async, &UI::GetCmd, this);
-				//port.TxData(txt);
+				port.TxData(txt);
 			}
 
 			if (ImGui::Button("Rx"))
@@ -70,16 +83,17 @@ void UI::Render()
 
 		if (ImGui::Begin("Data"))
 		{
-			if (!temperature.empty())
+			if (!temperature.IsEmpty())
 			{
-				ImGui::Text(std::to_string(temperature.back()).c_str());
-				
+				ImGui::Text(std::to_string(temperature.GetLast()).c_str());	
 			}
-			ImPlot::SetNextAxesLimits(0.0, 50.0, 0.0, 30.0);
-			if (ImPlot::BeginPlot("Test plot"))
+			
+			ImPlot::SetNextAxesLimits(0.0, (double)temperature.GetLimit(), 0.0, 30.0);
+			if (ImPlot::BeginPlot("Данные"))
 			{
-				if (!temperature.empty())
-					ImPlot::PlotLine("Temp", temperature.data(), temperature.size());
+				PLOT_SENSOR(temperature, "t °C");
+				PLOT_SENSOR(current, "A");
+				PLOT_SENSOR(voltage, "V");
 
 				ImPlot::EndPlot();
 			}
@@ -178,41 +192,32 @@ void UI::DataProc(buffer_t* pData)
 
 void UI::GetCmd()
 {
-	//std::string cmd;
+	std::string cmd;
 
 	while (!false)
 	{
-		// Если порт не открыт, стучимся каждые 250мс
-		if (!port.IsOpen())
-		{
-			std::this_thread::sleep_for(250ms);
-			continue;
-		}
-
-		mtx.lock();
 		if (!tasks.empty())
 		{
-			auto& cmd = tasks.front();
+			mtx.lock();
+			cmd = tasks.front();
 
-			if (cmd.find("T:") != -1 && cmd.size() > 3)
+			if (temperature.Add(cmd))
 			{
-				cmd = std::string(cmd.begin() + 2, cmd.end());
-
-				if (temperature.size() > 50)
-				{
-					temperature.erase(temperature.begin() + 1);
-				}
-
-				temperature.emplace_back(std::stoi(cmd));
-
+				tasks.pop();
+			}
+			else if (current.Add(cmd))
+			{
+				tasks.pop();
+			}
+			else if (voltage.Add(cmd))
+			{
 				tasks.pop();
 			}
 			else
 			{
 				tasks.pop(); // force pop of uncorrect cmd
 			}
-		}
-		
-		mtx.unlock();
+			mtx.unlock();
+		}		
 	}
 }

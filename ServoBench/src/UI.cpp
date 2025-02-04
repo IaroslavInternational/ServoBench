@@ -5,6 +5,8 @@
 
 #pragma execution_character_set("utf-8")  // Для отображения на русском языке
 
+using namespace std::literals::chrono_literals;
+
 UI::UI()
 {
 	ImGui::GetStyle().WindowBorderSize = 0.0f;
@@ -43,7 +45,7 @@ void UI::Render()
 {
 	ShowConnectionSettings();
 
-	 {
+	{
 		static uint64_t i = 0;
 		if (ImGui::Begin("Debug wnd"))
 		{
@@ -52,16 +54,15 @@ void UI::Render()
 
 			if (ImGui::Button("Send"))
 			{
-				CmdThread = std::async(std::launch::async, &UI::GetCmd, this);
+				//CmdThread = std::async(std::launch::async, &UI::GetCmd, this);
 				//port.TxData(txt);
 			}
 
 			if (ImGui::Button("Rx"))
 			{
 				port.ClearBuffer();
-				RxThread  = std::async(std::launch::async, &UI::ReceiveData, this);
-				
-				
+				RxThread = std::async(std::launch::async, &UI::ReceiveData, this);
+				CmdThread = std::async(std::launch::async, &UI::GetCmd, this);
 			}
 		}
 
@@ -70,7 +71,18 @@ void UI::Render()
 		if (ImGui::Begin("Data"))
 		{
 			if (!temperature.empty())
+			{
 				ImGui::Text(std::to_string(temperature.back()).c_str());
+				
+			}
+			ImPlot::SetNextAxesLimits(0.0, 50.0, 0.0, 30.0);
+			if (ImPlot::BeginPlot("Test plot"))
+			{
+				if (!temperature.empty())
+					ImPlot::PlotLine("Temp", temperature.data(), temperature.size());
+
+				ImPlot::EndPlot();
+			}
 		}
 
 		ImGui::End();
@@ -109,6 +121,7 @@ void UI::ShowConnectionSettings()
 				if (ImGui::Button("Подключить"))
 				{
 					port.Open(currentName);
+					
 				}
 			}
 
@@ -165,21 +178,29 @@ void UI::DataProc(buffer_t* pData)
 
 void UI::GetCmd()
 {
-	std::string cmd;
-	
+	//std::string cmd;
+
 	while (!false)
 	{
+		// Если порт не открыт, стучимся каждые 250мс
+		if (!port.IsOpen())
+		{
+			std::this_thread::sleep_for(250ms);
+			continue;
+		}
+
+		mtx.lock();
 		if (!tasks.empty())
 		{
 			auto& cmd = tasks.front();
 
-			if (cmd.find("T") != -1)
+			if (cmd.find("T:") != -1 && cmd.size() > 3)
 			{
 				cmd = std::string(cmd.begin() + 2, cmd.end());
 
 				if (temperature.size() > 50)
 				{
-					temperature.clear();
+					temperature.erase(temperature.begin() + 1);
 				}
 
 				temperature.emplace_back(std::stoi(cmd));
@@ -191,5 +212,7 @@ void UI::GetCmd()
 				tasks.pop(); // force pop of uncorrect cmd
 			}
 		}
+		
+		mtx.unlock();
 	}
 }

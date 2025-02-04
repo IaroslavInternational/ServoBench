@@ -80,10 +80,15 @@ void EchoCurrent()
 
 /* ДИСПЕТЧЕРЫ ЦИКЛОВ */
 
+// Диспетчер 100мс
+void disp_100ms()
+{
+    EchoTemperature();
+}
+
 // Диспетчер 500мс
 void disp_500ms()
 {
-    EchoTemperature();
 }
 
 // Диспетчер 1000мс
@@ -113,7 +118,7 @@ void setup()
     dispatch dsps[3];
 
     // Эмуляция потоков данных
-    dsps[0] = dispatch(_500ms,  &disp_500ms);
+    dsps[0] = dispatch(_100ms,  &disp_100ms);
     dsps[1] = dispatch(_1000ms, &disp_1000ms);
     dsps[2] = dispatch(_5000ms, &disp_5000ms);
 

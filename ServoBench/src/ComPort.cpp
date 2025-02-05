@@ -18,7 +18,7 @@ ComPort::~ComPort()
 	Close();
 }
 
-void ComPort::Open(const std::string& portName, uint32_t speed, uint8_t byte_size, uint8_t stop_bytes, uint8_t parity)
+bool ComPort::Open(const std::string& portName, uint32_t speed, uint8_t byte_size, uint8_t stop_bytes, uint8_t parity)
 {	
 	LOG_H("ComPort");
 
@@ -73,6 +73,8 @@ void ComPort::Open(const std::string& portName, uint32_t speed, uint8_t byte_siz
 	LOG_T("Buffer Size", buffer_size);
 
 	LOG_END();
+
+	return isActive;
 }
 
 void ComPort::Close()
@@ -87,6 +89,7 @@ void ComPort::Close()
 	{
 		LOG("Port " + name + " is closed\n");
 		isActive = false;
+		ClearBuffer();
 	}
 
 	LOG_END();

@@ -61,7 +61,7 @@ String GetRandom(int min, int max)
 // Функция выдачи данных о температуре
 void EchoTemperature()
 {
-    OUTPORT("T", GetRandom(20, 22));
+    OUTPORT("T", GetRandom(20, 23));
 }
 
 // Функция выдачи данных о напряжении
@@ -111,8 +111,29 @@ void setup()
     randomSeed(analogRead(0)); // Debug random seed
 
     // Настройка порта передачи данных
-    Serial.begin(9600);
+    Serial.begin(38400);
     Serial.setTimeout(10);
+
+    {
+        char   test_buffer[64];
+        String raw = "";
+
+        while (!false)
+        {
+            if (Serial.available() > 0)
+            {
+                memset(test_buffer, '\0', 64);
+                Serial.readBytes(test_buffer, 64);
+
+                raw = String(test_buffer);
+
+                if (!strcmp(raw.c_str(), "go"))
+                {
+                    break;
+                }
+            }
+        }
+    }
 
     // Диспетчеры
     dispatch dsps[3];

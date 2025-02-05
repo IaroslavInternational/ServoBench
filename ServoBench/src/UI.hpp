@@ -18,15 +18,19 @@ public:
 public:
 	void Render();
 private:
-	void ShowConnectionSettings();
+	void ShowLeftPanel();
+	void ShowMainChart();
+	void SetPanelSizeAndPosition(int corner, float width, float height, float x_offset, float y_offset);
 private:
 	std::list<int> getAvailablePorts();
+	void		   TryConnection(const std::string& name);
 	void		   ReceiveData();
 	void		   DataProc(buffer_t* pData);
 	void		   GetCmd();
 private:
 	ComPort port;				 // Порт
 	std::mutex mtx;				 // Mutex для управления tasks
+	std::future<void> ConnectionThread;  // Асинхронный поток подключения к порту
 	std::future<void> RxThread;  // Асинхронный поток приёма данных
 	std::future<void> CmdThread; // Асинхронный поток обработки данных
 	std::vector<bool> selected;  // Выбранный индекс порта

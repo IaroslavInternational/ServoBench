@@ -16,6 +16,7 @@ public:
 	T    GetLast() const;
 	std::string&    GetName();
 	uint32_t		GetLimit();
+	uint64_t		GetSize();
 	void		    SetLimit(uint32_t data_limit);
 	bool IsEmpty() const;
 private:
@@ -92,6 +93,12 @@ template<typename T>
 uint32_t Sensor<T>::GetLimit()
 {
 	return data_limit;
+}
+
+template<typename T>
+uint64_t Sensor<T>::GetSize()
+{
+	return data.size();
 }
 
 template<typename T>

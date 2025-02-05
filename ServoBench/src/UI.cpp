@@ -57,8 +57,14 @@ UI::UI()
 
 void UI::Render()
 {
-	ShowConnectionSettings();
+	//ImPlot::ShowDemoWindow();
+	//ImGui::ShowDemoWindow();
+	SetPanelSizeAndPosition(0, 0.2f, 1.0f, 0.0f, 0.0f);
+	ShowLeftPanel();
 
+	SetPanelSizeAndPosition(0, 0.8f, 0.5f, 0.2f, 0.0f);
+	ShowMainChart();
+	
 	{
 		static uint64_t i = 0;
 		if (ImGui::Begin("Debug wnd"))
@@ -67,7 +73,7 @@ void UI::Render()
 			ImGui::InputText("Data", (char*)txt, 20);
 
 			if (ImGui::Button("Send"))
-			{
+			{				
 				port.TxData(txt);
 			}
 
@@ -80,70 +86,106 @@ void UI::Render()
 		}
 
 		ImGui::End();
-
-		if (ImGui::Begin("Data"))
-		{
-			if (!temperature.IsEmpty())
-			{
-				ImGui::Text(std::to_string(temperature.GetLast()).c_str());	
-			}
-			
-			ImPlot::SetNextAxesLimits(0.0, (double)temperature.GetLimit(), 0.0, 30.0);
-			if (ImPlot::BeginPlot("Данные"))
-			{
-				PLOT_SENSOR(temperature, "t °C");
-				PLOT_SENSOR(current, "A");
-				PLOT_SENSOR(voltage, "V");
-
-				ImPlot::EndPlot();
-			}
-		}
-
-		ImGui::End();
 	}
 }
 
-void UI::ShowConnectionSettings()
-{
-	if (ImGui::Begin("Подключение"))
-	{
-		auto ports = getAvailablePorts();
-		
-		if (ports.size() > selected.size())
-		{
-			selected.resize(ports.size());
-		}
-	
-		size_t i = 0;
-		static std::string currentName = "";
 
-		for (auto& p : ports)
+void UI::ShowLeftPanel()
+{
+	if (ImGui::Begin("MainBar", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus))
+	{
+		if (ImGui::BeginTabBar("Main bar"))
 		{
-			currentName = std::string("COM") + std::to_string(p);
-			if (ImGui::Selectable(currentName.c_str(), selected[i]))
+			if (ImGui::BeginTabItem("Подключение"))
 			{
-				for (auto s : selected)
+				auto ports = getAvailablePorts();
+				std::vector<std::string> names;
+
+				if (ports.size() > selected.size())
 				{
-					s = false;
+					selected.resize(ports.size());
 				}
 
-				selected[i] = true;
-			}
+				for (auto& p : ports)
+				{
+					names.emplace_back(std::string("COM") + std::to_string(p) + '\0');
+				}
 
-			if (selected[i]) 
-			{
+				static int32_t item_current = 0;
+				ImGui::Combo("Порты", &item_current,
+					[](void* vec, int idx, const char** out_text) 
+					{
+						std::vector<std::string>* vector = reinterpret_cast<std::vector<std::string>*>(vec);
+							if (idx < 0 || idx >= vector->size()) 
+								return false;
+						*out_text = vector->at(idx).c_str();
+						return true;
+					}, reinterpret_cast<void*>(&names), names.size());
+
 				if (ImGui::Button("Подключить"))
 				{
-					port.Open(currentName);
-					
+					ConnectionThread = std::async(std::launch::async, &UI::TryConnection, this, names[item_current]);
 				}
-			}
 
-			i++;
+				ImGui::EndTabItem();
+			}
 		}
+
+		ImGui::EndTabBar();
 	}
 
 	ImGui::End();
+}
+
+void UI::ShowMainChart()
+{
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(17.0f / 255.0f, 17.0f / 255.0f, 17.0f / 255.0f, 1.00f));
+	if (ImGui::Begin("Data", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus))
+	{
+		ImPlot::SetNextAxesLimits(0.0, (double)temperature.GetSize() - 1, 0.0, 30.0, ImPlotCond_Always);
+		if (ImPlot::BeginPlot("Данные"))
+		{
+			PLOT_SENSOR(temperature, "t °C");
+			PLOT_SENSOR(current, "A");
+			PLOT_SENSOR(voltage, "V");
+
+			ImPlot::EndPlot();
+		}
+	}
+	ImGui::PopStyleColor();
+
+	ImGui::End();
+}
+
+void UI::SetPanelSizeAndPosition(int corner, float width, float height, float x_offset, float y_offset)
+{
+	ImGuiIO& io = ImGui::GetIO();
+
+	float MenuHeight = 0.0f;
+	ImVec2 DispSize = io.DisplaySize;
+
+	float PanelW = round(DispSize.x * width);
+	float PanelH = DispSize.y * height;
+
+	ImVec2 PanelSize = ImVec2(
+		PanelW,
+		PanelH
+	);
+
+	ImVec2 PanelPos = ImVec2(
+		(corner & 1) ? DispSize.x + round(DispSize.x * x_offset) : round(DispSize.x * x_offset),
+		(corner & 2) ? DispSize.y + MenuHeight + DispSize.y * y_offset : MenuHeight + DispSize.y * y_offset
+	);
+
+	ImVec2 PanelPivot = ImVec2(
+		(corner & 1) ? 1.0f : 0.0f,
+		(corner & 2) ? 1.0f : 0.0f
+	);
+
+	ImGui::SetNextWindowPos(PanelPos, ImGuiCond_Always, PanelPivot);
+	ImGui::SetNextWindowSize(PanelSize);
 }
 
 std::list<int> UI::getAvailablePorts()
@@ -151,7 +193,7 @@ std::list<int> UI::getAvailablePorts()
 	wchar_t lpTargetPath[5000];
 	std::list<int> portList;
 
-	for (int i = 0; i < 255; i++)
+	for (uint16_t i = 0; i < 255; i++)
 	{
 		std::wstring str = L"COM" + std::to_wstring(i);
 		DWORD res = QueryDosDevice(str.c_str(), lpTargetPath, 5000);
@@ -163,6 +205,26 @@ std::list<int> UI::getAvailablePorts()
 	}
 
 	return portList;
+}
+
+void UI::TryConnection(const std::string& name)
+{
+	signed char connectionCode[] = "go";
+	
+	if (!port.Open(name, 38400u))
+	{
+		LOG("TRY FAILED");
+		return;
+	}
+	
+	while (port.RxData() == nullptr)
+	{
+		port.TxData(connectionCode);
+		std::this_thread::sleep_for(10ms);
+	}
+	
+	RxThread = std::async(std::launch::async, &UI::ReceiveData, this);
+	CmdThread = std::async(std::launch::async, &UI::GetCmd, this);
 }
 
 void UI::ReceiveData()

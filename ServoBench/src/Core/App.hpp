@@ -12,5 +12,6 @@ public:
 private:
 	Window wnd;
 	UI ui;
+	std::chrono::steady_clock::time_point timer;
 };
 

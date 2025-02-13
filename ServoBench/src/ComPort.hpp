@@ -23,6 +23,7 @@ public:
 	bool IsOpen() const;
 	void SetBufferSize(uint64_t buffer_size);
 	void ClearBuffer();
+	std::string GetName() const;
 private:
 	HANDLE Serial   = nullptr;
 	bool   isActive = false;
@@ -32,9 +33,9 @@ private:
 	uint8_t     byte_size = ONESTOPBIT;
 	uint8_t     parity    = NOPARITY;
 
-	DWORD		     	SentSize;
-	DWORD		     	readSize;
-	uint64_t     	    buffer_size;
-	buffer_t            buffer;
+	DWORD    sentSize    = 0;
+	DWORD    readSize    = 0;
+	uint64_t buffer_size = 64;
+	buffer_t buffer;
 };
 

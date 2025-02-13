@@ -156,4 +156,9 @@ void ComPort::ClearBuffer()
 	buffer.clear();
 }
 
+std::string ComPort::GetName() const
+{
+	return name;
+}
+
 #undef CHECK_ERROR

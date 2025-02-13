@@ -11,12 +11,22 @@
 
 #include "Sensor.hpp"
 
+struct 
+{
+	union 
+	{
+		uint8_t time_out : 1;
+	} bits;
+
+	uint8_t value;
+} fault;
+
 class UI
 {
 public:
 	UI();
 public:
-	void Render();
+	void Render(float dt);
 private:
 	void ShowLeftPanel();
 	void ShowMainChart();
@@ -24,6 +34,7 @@ private:
 private:
 	std::list<int> getAvailablePorts();
 	void		   TryConnection(const std::string& name);
+	void		   CloseConnection();
 	void		   ReceiveData();
 	void		   DataProc(buffer_t* pData);
 	void		   GetCmd();
@@ -35,8 +46,11 @@ private:
 	std::future<void> CmdThread; // Асинхронный поток обработки данных
 	std::vector<bool> selected;  // Выбранный индекс порта
 	task_list_t tasks;			 // Список команд
+	std::atomic<bool> ThreadsAllowed = false;
+	std::atomic<float> time_sum = 0.0f;
 private:
-	Sensor<int16_t> temperature;
+	Sensor<float>   temperature;
 	Sensor<int16_t> current;
 	Sensor<int16_t> voltage;
+	std::vector<float> time_stamps;
 };

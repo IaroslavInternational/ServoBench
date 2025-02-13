@@ -8,29 +8,36 @@ template<typename T>
 class Sensor
 {
 public:
-	Sensor(const std::string& name, const std::string& mask, uint32_t data_limit = 50);
+	Sensor(const std::string& name, const std::string& mask, T data_min, T data_max, uint32_t data_limit = 50);
 public:
 	void Add(T val);
 	bool Add(std::string& cmd);
 	T*   Get();
 	T    GetLast() const;
-	std::string&    GetName();
-	uint32_t		GetLimit();
-	uint64_t		GetSize();
-	void		    SetLimit(uint32_t data_limit);
-	bool IsEmpty() const;
+public:
+	std::string& GetName();
+	uint32_t	 GetLimit();
+	uint64_t	 GetSize();
+	void		 SetLimit(uint32_t data_limit);
+	bool         IsEmpty() const;
+	T		     GetMax() const;
+	T		     GetMin() const;
 private:
 	std::string    name;
 	std::string    mask;
+	T			   data_min;
+	T			   data_max;
 	uint32_t       data_limit;
 	std::vector<T> data;
 };
 
 template<typename T>
-Sensor<T>::Sensor(const std::string& name, const std::string& mask, uint32_t data_limit)
+Sensor<T>::Sensor(const std::string& name, const std::string& mask, T data_min, T data_max, uint32_t data_limit)
 	:
 	name(name),
 	mask(mask),
+	data_min(data_min),
+	data_max(data_max),
 	data_limit(data_limit)
 {
 	data.reserve(data_limit);
@@ -56,7 +63,7 @@ bool Sensor<T>::Add(std::string& cmd)
 		
 		try
 		{
-			Add(std::stoi(cmd));
+			Add(std::stof(cmd));
 		}
 		catch (std::exception& ex)
 		{
@@ -113,3 +120,16 @@ bool Sensor<T>::IsEmpty() const
 {
 	return data.empty();
 }
+
+template<typename T>
+T Sensor<T>::GetMax() const
+{
+	return data_max;
+}
+
+template<typename T>
+T Sensor<T>::GetMin() const
+{
+	return data_min;
+}
+

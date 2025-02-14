@@ -46,8 +46,8 @@ using namespace std::literals::chrono_literals;
 
 UI::UI()
 	:
-	temperature("Температура", "T", -40, 40),
-	current("Ток", "C", 0, 5, 450u),
+	temperature("Температура", "T", -40, 40, 1400u),
+	current("Ток", "C", 0, 5),
 	voltage("Напряжение", "V", 0, 20)
 {
 	//ImPlot::PlotS
@@ -101,12 +101,7 @@ void UI::Render(float dt)
 				port.TxData(txt);
 			}
 
-			if (ImGui::Button("Rx"))
-			{
-				port.ClearBuffer();
-				RxThread = std::async(std::launch::async, &UI::ReceiveData, this);
-				CmdThread = std::async(std::launch::async, &UI::GetCmd, this);
-			}
+			ImGui::SliderInt("Limit", (int*) &timer.limit, 450, 8000);
 		}
 
 		ImGui::End();
@@ -152,18 +147,29 @@ void UI::Render(float dt)
 
 	if (port.IsOpen())
 	{
-		time_temperature.NewFrame(dt);	
-		time_temperature.Stamp();
+		timer.NewFrame(dt);	
+		timer.Stamp();
 
-		if (test_buffer.size() > time_temperature.limit)
+		if (out_buffer.size() > timer.limit)
 		{
-			test_buffer.erase(test_buffer.begin());
+			out_buffer.erase(out_buffer.begin());
+		}
+
+		if (timer.limit != temperature.GetLimit())
+		{
+			temperature.SetLimit(timer.limit);
+
+			if (out_buffer.size() > timer.limit)
+			{
+				out_buffer.erase(out_buffer.begin(), out_buffer.begin() + (out_buffer.size() - timer.limit));
+				timer.stamps.erase(timer.stamps.begin(), timer.stamps.begin() + (timer.stamps.size() - out_buffer.size()));
+			}
 		}
 
 		if (temperature.GetSize() > 0)
-			test_buffer.emplace_back(current.GetLast());
+			out_buffer.emplace_back(temperature.GetLast());
 		else
-			test_buffer.emplace_back(0.0f);
+			out_buffer.emplace_back(0.0f);
 	}
 }
 
@@ -241,8 +247,8 @@ void UI::ShowMainChart()
 	if (ImGui::Begin("Data", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus))
 	{
-		if (time_temperature.stamps.size() > 0)
-			ImPlot::SetNextAxesLimits(time_temperature.stamps[0], time_temperature.stamps.back(), current.GetMin(), current.GetMax(), ImPlotCond_Always);
+		if (timer.stamps.size() > 0)
+			ImPlot::SetNextAxesLimits(timer.stamps[0], timer.stamps.back(), temperature.GetMin(), temperature.GetMax(), ImPlotCond_Always);
 		
 		//ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 2.0f);
 		if (ImPlot::BeginPlot(port.GetName().c_str()))
@@ -251,7 +257,7 @@ void UI::ShowMainChart()
 			if (!temperature.IsEmpty())      
 			{				
 				//ImPlot::PlotLine((temperature.GetName() + " " + "t °C").c_str(), time_temperature.stamps.data(), test_buffer.data(), test_buffer.size());
-				ImPlot::PlotLine((current.GetName() + " " + " A").c_str(), time_temperature.stamps.data(), test_buffer.data(), test_buffer.size());
+				ImPlot::PlotLine((current.GetName() + " " + "t °C").c_str(), timer.stamps.data(), out_buffer.data(), out_buffer.size());
 				//ImPlot::PlotLine((temperature.GetName() + " " + "t °C").c_str(), time_temperature.stamps.data(), temperature.Get(), temperature.GetSize());
 			}
 			//PLOT_SENSOR(current, "A");
@@ -359,7 +365,7 @@ void UI::CloseConnection()
 	port.TxData((int8_t*)"out");
 	port.Close();	
 	
-	time_temperature.sum = 0.0f;
+	timer.sum = 0.0f;
 }
 
 void UI::ReceiveData()
@@ -393,7 +399,7 @@ void UI::DataProc(buffer_t* pData)
 void UI::GetCmd()
 {
 	std::string cmd;
-	time_temperature.sum = 0.0f;
+	timer.sum = 0.0f;
 
 	while (!false)
 	{

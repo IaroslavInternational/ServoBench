@@ -38,7 +38,7 @@ struct time_ctrl
 		stamps.emplace_back(sum);
 	}
 
-	uint16_t		   limit = 450;
+	uint16_t		   limit = 1400;
 	std::atomic<float> sum   = 0.0f;
 	std::vector<float> stamps;
 };
@@ -71,11 +71,11 @@ private:
 	std::vector<bool> selected;          // Выбранный индекс порта
 	task_list_t	      tasks;             // Список команд
 	std::atomic<bool> ThreadsAllowed = false;
-	time_ctrl		  time_temperature;
+	time_ctrl		  timer;
 private:
 	Sensor<float> temperature;
 	Sensor<float> current;
 	Sensor<float> voltage;
 
-	std::vector<float> test_buffer;
+	std::vector<float> out_buffer;
 };

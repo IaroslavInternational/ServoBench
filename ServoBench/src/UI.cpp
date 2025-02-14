@@ -47,7 +47,7 @@ using namespace std::literals::chrono_literals;
 UI::UI()
 	:
 	temperature("Температура", "T", -40, 40),
-	current("Ток", "C", 0, 5),
+	current("Ток", "C", 0, 5, 450u),
 	voltage("Напряжение", "V", 0, 20)
 {
 	//ImPlot::PlotS
@@ -130,13 +130,13 @@ void UI::Render(float dt)
 				ImPlot::PushColormap(ImPlotColormap_Viridis);
 
 				colors = 0;
-				PLOT_TABLE_SENSOR(temperature, "Температура", "°C", "%d");
+				PLOT_TABLE_SENSOR(temperature, "Температура", "°C", "%.2f");
 
 				colors = 1;
-				PLOT_TABLE_SENSOR(current, "Ток", "A", "%d");
+				PLOT_TABLE_SENSOR(current, "Ток", "A", "%.2f");
 
 				colors = 2;
-				PLOT_TABLE_SENSOR(voltage, "Напряжение", "V", "%d");
+				PLOT_TABLE_SENSOR(voltage, "Напряжение", "V", "%.2f");
 
 				ImPlot::PopColormap();
 				ImGui::EndTable();
@@ -150,7 +150,21 @@ void UI::Render(float dt)
 	SetPanelSizeAndPosition(0, 0.8f, 0.5f, 0.2f, 0.0f);
 	ShowMainChart();
 
-	time_sum += dt;
+	if (port.IsOpen())
+	{
+		time_temperature.NewFrame(dt);	
+		time_temperature.Stamp();
+
+		if (test_buffer.size() > time_temperature.limit)
+		{
+			test_buffer.erase(test_buffer.begin());
+		}
+
+		if (temperature.GetSize() > 0)
+			test_buffer.emplace_back(current.GetLast());
+		else
+			test_buffer.emplace_back(0.0f);
+	}
 }
 
 void UI::ShowLeftPanel()
@@ -227,16 +241,18 @@ void UI::ShowMainChart()
 	if (ImGui::Begin("Data", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus))
 	{
-		if (time_stamps.size() > 0)
-			ImPlot::SetNextAxesLimits(time_stamps[0], time_stamps.back(), 0.0, 30.0, ImPlotCond_Always);
-
-		ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 2.0f);
+		if (time_temperature.stamps.size() > 0)
+			ImPlot::SetNextAxesLimits(time_temperature.stamps[0], time_temperature.stamps.back(), current.GetMin(), current.GetMax(), ImPlotCond_Always);
+		
+		//ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 2.0f);
 		if (ImPlot::BeginPlot(port.GetName().c_str()))
 		{
 			//PLOT_SENSOR(temperature, "t °C");
 			if (!temperature.IsEmpty())      
 			{				
-				ImPlot::PlotLine((temperature.GetName() + " " + "t °C").c_str(), time_stamps.data(), temperature.Get(), temperature.GetSize());
+				//ImPlot::PlotLine((temperature.GetName() + " " + "t °C").c_str(), time_temperature.stamps.data(), test_buffer.data(), test_buffer.size());
+				ImPlot::PlotLine((current.GetName() + " " + " A").c_str(), time_temperature.stamps.data(), test_buffer.data(), test_buffer.size());
+				//ImPlot::PlotLine((temperature.GetName() + " " + "t °C").c_str(), time_temperature.stamps.data(), temperature.Get(), temperature.GetSize());
 			}
 			//PLOT_SENSOR(current, "A");
 			//PLOT_SENSOR(voltage, "V");
@@ -334,9 +350,16 @@ void UI::CloseConnection()
 {
 	ThreadsAllowed = false;
 
-	port.Close();
+	// Каждые 50мс ожидаем завершения потоков и закрываем порт
+	while (!IsThreadTerminated(RxThread) && !IsThreadTerminated(CmdThread))
+	{
+		std::this_thread::sleep_for(50ms);
+	}
 
-	time_sum = 0.0f;
+	port.TxData((int8_t*)"out");
+	port.Close();	
+	
+	time_temperature.sum = 0.0f;
 }
 
 void UI::ReceiveData()
@@ -370,7 +393,7 @@ void UI::DataProc(buffer_t* pData)
 void UI::GetCmd()
 {
 	std::string cmd;
-	time_sum = 0;
+	time_temperature.sum = 0.0f;
 
 	while (!false)
 	{
@@ -381,14 +404,9 @@ void UI::GetCmd()
 		{
 			mtx.lock();
 			cmd = tasks.front();
-
+			
 			if (temperature.Add(cmd))
 			{	
-				if (time_stamps.size() > 50)
-					time_stamps.erase(time_stamps.begin());
-
-				time_stamps.push_back(time_sum);
-
 				tasks.pop();
 			}
 			else if (current.Add(cmd))
@@ -406,4 +424,10 @@ void UI::GetCmd()
 			mtx.unlock();
 		}		
 	}
+}
+
+template<typename T>
+bool UI::IsThreadTerminated(std::future<T>& t)
+{
+	return t.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }

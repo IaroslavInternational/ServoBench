@@ -3,6 +3,19 @@
 #include "Window.hpp"
 #include "../UI.hpp"
 
+struct FrameTimer
+{
+	float Mark()
+	{
+		const auto old = counter;
+		counter = std::chrono::steady_clock::now();
+
+		return std::chrono::duration<float>(counter - old).count();
+	}
+
+	std::chrono::steady_clock::time_point counter;
+};
+
 class App
 {
 public:
@@ -12,6 +25,6 @@ public:
 private:
 	Window wnd;
 	UI ui;
-	std::chrono::steady_clock::time_point timer;
+	FrameTimer timer;
 };
 

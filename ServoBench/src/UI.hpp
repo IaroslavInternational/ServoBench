@@ -21,6 +21,28 @@ struct
 	uint8_t value;
 } fault;
 
+struct time_ctrl
+{
+	void NewFrame(float dt)
+	{
+		sum += dt;
+	}
+
+	void Stamp()
+	{
+		if (stamps.size() > limit)
+		{
+			stamps.erase(stamps.begin());
+		}
+
+		stamps.emplace_back(sum);
+	}
+
+	uint16_t		   limit = 450;
+	std::atomic<float> sum   = 0.0f;
+	std::vector<float> stamps;
+};
+
 class UI
 {
 public:
@@ -38,19 +60,22 @@ private:
 	void		   ReceiveData();
 	void		   DataProc(buffer_t* pData);
 	void		   GetCmd();
+	template<typename T>
+	bool		   IsThreadTerminated(std::future<T>& t);
 private:
-	ComPort port;				 // Порт
-	std::mutex mtx;				 // Mutex для управления tasks
+	ComPort port;				         // Порт
+	std::mutex mtx;				         // Mutex для управления tasks
 	std::future<void> ConnectionThread;  // Асинхронный поток подключения к порту
-	std::future<void> RxThread;  // Асинхронный поток приёма данных
-	std::future<void> CmdThread; // Асинхронный поток обработки данных
-	std::vector<bool> selected;  // Выбранный индекс порта
-	task_list_t tasks;			 // Список команд
+	std::future<void> RxThread;          // Асинхронный поток приёма данных
+	std::future<void> CmdThread;         // Асинхронный поток обработки данных
+	std::vector<bool> selected;          // Выбранный индекс порта
+	task_list_t	      tasks;             // Список команд
 	std::atomic<bool> ThreadsAllowed = false;
-	std::atomic<float> time_sum = 0.0f;
+	time_ctrl		  time_temperature;
 private:
-	Sensor<float>   temperature;
-	Sensor<int16_t> current;
-	Sensor<int16_t> voltage;
-	std::vector<float> time_stamps;
+	Sensor<float> temperature;
+	Sensor<float> current;
+	Sensor<float> voltage;
+
+	std::vector<float> test_buffer;
 };

@@ -48,7 +48,7 @@ void Sensor<T>::Add(T val)
 {
 	if (data.size() > data_limit)
 	{
-		data.erase(data.begin() + 1);
+		data.erase(data.begin());
 	}
 
 	data.emplace_back(val);

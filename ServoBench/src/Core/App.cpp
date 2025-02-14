@@ -8,11 +8,9 @@ App::App(const std::wstring& name, int x, int y)
 
 void App::Go()
 {
-	const auto old = timer;
-	timer = std::chrono::steady_clock::now();
-	const std::chrono::duration<float> frameTime = timer - old;
+	const auto dt = timer.Mark();
 	
 	wnd.BeginFrame();
-	ui.Render(frameTime.count());
+	ui.Render(dt);
 	wnd.EndFrame();
 }

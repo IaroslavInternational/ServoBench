@@ -38,8 +38,8 @@ bool ComPort::Open(const std::string& portName, uint32_t speed, uint8_t byte_siz
 	LOG(" init:\n");
 
 	// Open port
-	Serial = CreateFile(S2WS(portName).c_str(), GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-
+	Serial = CreateFile(S2WS(portName).c_str(), GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING, 0);
+	
 	CHECK_ERROR(Serial == INVALID_HANDLE_VALUE,         isActive, "Unknown handle error");
 	CHECK_ERROR(GetLastError() == ERROR_FILE_NOT_FOUND, isActive, "Serial Port not found");
 
@@ -73,6 +73,12 @@ bool ComPort::Open(const std::string& portName, uint32_t speed, uint8_t byte_siz
 	LOG_T("Buffer Size", buffer_size);
 
 	LOG_END();
+
+	// Clear internal buffer
+	if (isActive)
+	{
+		PurgeComm(Serial, PURGE_RXCLEAR | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_TXABORT);
+	}
 
 	return isActive;
 }

@@ -143,9 +143,25 @@ void setup()
     dsps[1] = dispatch(_1000ms, &disp_1000ms);
     dsps[2] = dispatch(_5000ms, &disp_5000ms);
 
+    char   input_buffer[64];
+    String raw = "";
+
     // Основной цикл
     while (!false)
     {
+        if (Serial.available() > 0)
+        {
+            memset(input_buffer, '\0', 64);
+            Serial.readBytes(input_buffer, 64);
+
+            raw = String(input_buffer);
+
+            if (!strcmp(raw.c_str(), "out"))
+            {
+                asm volatile("jmp 0x00");
+            }
+        }
+
         for (uint8_t i = 0; i < 3; i++)
         {
             dsps[i].go();

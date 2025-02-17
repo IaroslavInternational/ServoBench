@@ -6,6 +6,7 @@
 #include <list>
 #include <vector>
 #include <queue>
+#include <array>
 #include <future>
 #include <mutex>
 
@@ -52,6 +53,7 @@ public:
 private:
 	void ShowLeftPanel();
 	void ShowMainChart();
+	void ShowTable();
 	void SetPanelSizeAndPosition(int corner, float width, float height, float x_offset, float y_offset);
 private:
 	std::list<int> getAvailablePorts();
@@ -63,12 +65,15 @@ private:
 	template<typename T>
 	bool		   IsThreadTerminated(std::future<T>& t);
 private:
+	template<typename T>
+	void PlotTableSensor(Sensor<T>* sensor, const std::string& header, const std::string& units, const std::string& spec, uint16_t colors);
+private:
 	ComPort port;				         // Порт
 	std::mutex mtx;				         // Mutex для управления tasks
 	std::future<void> ConnectionThread;  // Асинхронный поток подключения к порту
 	std::future<void> RxThread;          // Асинхронный поток приёма данных
 	std::future<void> CmdThread;         // Асинхронный поток обработки данных
-	std::vector<bool> selected;          // Выбранный индекс порта
+	std::array<bool, 3> selected;          // Выбранный сигнал для отрисовки
 	task_list_t	      tasks;             // Список команд
 	std::atomic<bool> ThreadsAllowed = false;
 	time_ctrl		  timer;
@@ -76,6 +81,8 @@ private:
 	Sensor<float> temperature;
 	Sensor<float> current;
 	Sensor<float> voltage;
+
+	Sensor<float>* choosen_sensor = nullptr;
 
 	std::vector<float> out_buffer;
 };

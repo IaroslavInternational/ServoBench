@@ -13,42 +13,15 @@ if (!sensor.IsEmpty())      \
 	ImPlot::PlotLine((sensor.GetName() + " " + units).c_str(), (float*)sensor.Get(), time_stamps.data(), sensor.GetSize());\
 }
 
-#define PLOT_TABLE_SENSOR(sensor, header, units, spec) \
-if (!sensor.IsEmpty())      \
-{\
-	ImGui::TableNextRow();\
-	ImGui::TableSetColumnIndex(0);\
-	ImGui::Text(header);\
-	ImGui::TableSetColumnIndex(1);\
-	ImGui::Text((std::string(spec) + " " + units).c_str(), sensor.GetLast());\
-	ImGui::TableSetColumnIndex(2);\
-	\
-	ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0, 0));\
-	ImPlot::SetNextAxesLimits(0, (double)sensor.GetLimit(), (double)sensor.GetMin(), (double)sensor.GetMax(), ImPlotCond_Always);\
-	if (ImPlot::BeginPlot(("##" + std::string(header)).c_str(), ImVec2(-1, 35), ImPlotFlags_CanvasOnly))\
-	{\
-		ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(colors));\
-		ImPlot::SetNextFillStyle(ImPlot::GetColormapColor(colors), 0.25); \
-		ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoDecorations);\
-		ImPlot::PlotShaded(("##" + std::string(header) + "_s_data").c_str(), sensor.Get(), sensor.GetSize(), -10000.0, 1, 0); \
-\
-		ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(colors)); \
-		ImPlot::SetNextFillStyle(ImPlot::GetColormapColor(colors), 0.25); \
-		ImPlot::PlotLine(("##" + std::string(header) + "_data").c_str(),     sensor.Get(), sensor.GetSize(), 1, 0); \
-		ImPlot::EndPlot();\
-	}\
-}\
-
-
 /************/
 
 using namespace std::literals::chrono_literals;
 
 UI::UI()
 	:
-	temperature("Температура", "T", -40, 40, 1400u),
-	current("Ток", "C", 0, 5),
-	voltage("Напряжение", "V", 0, 20)
+	temperature("Температура", "T", -40, 40, 20),
+	current("Ток", "C", 0, 5, 20),
+	voltage("Напряжение", "V", 0, 20, 20)
 {
 	//ImPlot::PlotS
 	ImGui::GetStyle().WindowBorderSize = 0.0f;
@@ -101,53 +74,22 @@ void UI::Render(float dt)
 				port.TxData(txt);
 			}
 
-			ImGui::SliderInt("Limit", (int*) &timer.limit, 450, 8000);
+			ImGui::SliderInt("Limit", (int*)&timer.limit, 450, 8000);
 		}
-
-		ImGui::End();
-
-		SetPanelSizeAndPosition(0, 0.5f, 0.5f, 0.2f, 0.45f);
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(17.0f / 255.0f, 17.0f / 255.0f, 17.0f / 255.0f, 1.00f));
-		if (ImGui::Begin("Data Metrics", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus))
-		{
-			static const ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV |
-				ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable;
-
-			static uint16_t colors = 0;
-
-			if (ImGui::BeginTable("##table", 3, flags, ImVec2(-1, 0))) 
-			{
-				ImGui::TableSetupColumn("Показатель", ImGuiTableColumnFlags_WidthFixed, 75.0f);
-				ImGui::TableSetupColumn("Значение", ImGuiTableColumnFlags_WidthFixed, 75.0f);
-				ImGui::TableSetupColumn("Сигнал");
-				ImGui::TableHeadersRow();
-				ImPlot::PushColormap(ImPlotColormap_Viridis);
-
-				colors = 0;
-				PLOT_TABLE_SENSOR(temperature, "Температура", "°C", "%.2f");
-
-				colors = 1;
-				PLOT_TABLE_SENSOR(current, "Ток", "A", "%.2f");
-
-				colors = 2;
-				PLOT_TABLE_SENSOR(voltage, "Напряжение", "V", "%.2f");
-
-				ImPlot::PopColormap();
-				ImGui::EndTable();
-			}
-		}
-		ImGui::PopStyleColor();
 
 		ImGui::End();
 	}
 
+	SetPanelSizeAndPosition(0, 0.5f, 0.5f, 0.2f, 0.45f);
+	ShowTable();
+
 	SetPanelSizeAndPosition(0, 0.8f, 0.5f, 0.2f, 0.0f);
 	ShowMainChart();
 
-	if (port.IsOpen())
+	// Получение меток времени
+	if (port.IsOpen() && ThreadsAllowed)
 	{
-		timer.NewFrame(dt);	
+		timer.NewFrame(dt);
 		timer.Stamp();
 
 		if (out_buffer.size() > timer.limit)
@@ -155,10 +97,8 @@ void UI::Render(float dt)
 			out_buffer.erase(out_buffer.begin());
 		}
 
-		if (timer.limit != temperature.GetLimit())
+		if (timer.limit != out_buffer.size())
 		{
-			temperature.SetLimit(timer.limit);
-
 			if (out_buffer.size() > timer.limit)
 			{
 				out_buffer.erase(out_buffer.begin(), out_buffer.begin() + (out_buffer.size() - timer.limit));
@@ -166,10 +106,13 @@ void UI::Render(float dt)
 			}
 		}
 
-		if (temperature.GetSize() > 0)
-			out_buffer.emplace_back(temperature.GetLast());
-		else
-			out_buffer.emplace_back(0.0f);
+		if (choosen_sensor != nullptr)
+		{
+			if (choosen_sensor->GetSize() > 0)
+				out_buffer.emplace_back(choosen_sensor->GetLast());
+			else
+				out_buffer.emplace_back(0.0f);
+		}
 	}
 }
 
@@ -184,11 +127,6 @@ void UI::ShowLeftPanel()
 			{
 				auto ports = getAvailablePorts();
 				std::vector<std::string> names;
-
-				if (ports.size() > selected.size())
-				{
-					selected.resize(ports.size());
-				}
 
 				for (auto& p : ports)
 				{
@@ -248,24 +186,59 @@ void UI::ShowMainChart()
 		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus))
 	{
 		if (timer.stamps.size() > 0)
-			ImPlot::SetNextAxesLimits(timer.stamps[0], timer.stamps.back(), temperature.GetMin(), temperature.GetMax(), ImPlotCond_Always);
+			ImPlot::SetNextAxesLimits(timer.stamps[0], timer.stamps.back(), 0.0, 1.0, ImPlotCond_Always);
+		if (choosen_sensor != nullptr)
+			ImPlot::SetNextAxesLimits(timer.stamps[0], timer.stamps.back(), choosen_sensor->GetMin(), choosen_sensor->GetMax(), ImPlotCond_Always);
 		
-		//ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 2.0f);
 		if (ImPlot::BeginPlot(port.GetName().c_str()))
 		{
-			//PLOT_SENSOR(temperature, "t °C");
-			if (!temperature.IsEmpty())      
+			if (choosen_sensor != nullptr && !out_buffer.empty())
 			{				
-				//ImPlot::PlotLine((temperature.GetName() + " " + "t °C").c_str(), time_temperature.stamps.data(), test_buffer.data(), test_buffer.size());
-				ImPlot::PlotLine((current.GetName() + " " + "t °C").c_str(), timer.stamps.data(), out_buffer.data(), out_buffer.size());
-				//ImPlot::PlotLine((temperature.GetName() + " " + "t °C").c_str(), time_temperature.stamps.data(), temperature.Get(), temperature.GetSize());
+				ImPlot::PlotLine((choosen_sensor->GetName()).c_str(), timer.stamps.data(), out_buffer.data(), out_buffer.size());
 			}
-			//PLOT_SENSOR(current, "A");
-			//PLOT_SENSOR(voltage, "V");
 
 			ImPlot::EndPlot();
 		}
 
+	}
+	ImGui::PopStyleColor();
+
+	ImGui::End();
+}
+
+void UI::ShowTable()
+{
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(17.0f / 255.0f, 17.0f / 255.0f, 17.0f / 255.0f, 1.00f));
+	if (ImGui::Begin("Data Metrics", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus))
+	{
+		static const ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV |
+			ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable;
+
+		static uint16_t colors = 0;
+
+		if (ImGui::BeginTable("##table", 4, flags, ImVec2(-1, 0)))
+		{
+			ImGui::TableSetupColumn("Показатель", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+			ImGui::TableSetupColumn("Значение", ImGuiTableColumnFlags_WidthFixed, 75.0f);
+			ImGui::TableSetupColumn("Сигнал");
+			ImGui::TableSetupColumn("Вывести");
+			ImGui::TableHeadersRow();
+			ImPlot::PushColormap(ImPlotColormap_Viridis);
+
+			// Не менять цвета
+			colors = 0;
+			PlotTableSensor(&temperature, "Температура", "°C", "%.2f", colors);
+
+			colors = 1;
+			PlotTableSensor(&current, "Ток", "A", "%.2f", colors);
+
+			colors = 2;
+			PlotTableSensor(&voltage, "Напряжение", "V", "%.2f", colors);
+
+			ImPlot::PopColormap();
+			ImGui::EndTable();
+		}
 	}
 	ImGui::PopStyleColor();
 
@@ -436,4 +409,59 @@ template<typename T>
 bool UI::IsThreadTerminated(std::future<T>& t)
 {
 	return t.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
+
+template<typename T>
+void UI::PlotTableSensor(Sensor<T>* sensor, const std::string& header, const std::string& units, const std::string& spec, uint16_t colors)
+{
+	if (!sensor->IsEmpty())      
+	{
+		ImGui::TableNextRow(); 
+		ImGui::TableSetColumnIndex(0); 
+		ImGui::Text(header.c_str()); 
+		ImGui::TableSetColumnIndex(1); 
+		ImGui::Text((spec + " " + units).c_str(), sensor->GetLast()); 
+		ImGui::TableSetColumnIndex(2); 
+		
+		ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0, 0)); 
+		ImPlot::SetNextAxesLimits(0, (double)sensor->GetLimit(), (double)sensor->GetMin(), (double)sensor->GetMax(), ImPlotCond_Always);
+		if (ImPlot::BeginPlot(("##" + header).c_str(), ImVec2(-1, 35), ImPlotFlags_CanvasOnly))
+		{
+			ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(colors)); 
+			ImPlot::SetNextFillStyle(ImPlot::GetColormapColor(colors), 0.25); 
+			ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoDecorations); 
+			ImPlot::PlotShaded(("##" + header + "_s_data").c_str(), sensor->Get(), (double)sensor->GetSize(), -10000.0, 1, 0);
+			
+			ImPlot::SetNextLineStyle(ImPlot::GetColormapColor(colors)); 
+			ImPlot::SetNextFillStyle(ImPlot::GetColormapColor(colors), 0.25); 
+			ImPlot::PlotLine(("##" + header + "_data").c_str(), sensor->Get(), (double)sensor->GetSize(), 1, 0);
+			ImPlot::EndPlot(); 
+		}
+
+		ImGui::TableSetColumnIndex(3);
+		ImGui::PushID(("##" + header + "_box").c_str());
+		if (ImGui::Checkbox("", &selected[colors]))
+		{
+			if (selected[colors])
+			{
+				choosen_sensor = sensor;
+
+				memset(selected.data(), false, selected.size());
+				selected[colors] = true;
+			}
+			else
+			{
+				choosen_sensor = nullptr;
+
+				memset(selected.data(), false, selected.size());
+				selected[colors] = false;
+			}
+
+			out_buffer.clear();
+			out_buffer.resize(timer.limit);
+
+		}
+
+		ImGui::PopID();
+	}
 }

@@ -3,17 +3,10 @@
 #include "CoreLog.hpp"
 #include "Core/data_types.hpp"
 
+#include <sstream>
+#include <fstream>
+
 #pragma execution_character_set("utf-8")  // Для отображения на русском языке
-
-/* CODE GEN */
-
-#define PLOT_SENSOR(sensor, units) \
-if (!sensor.IsEmpty())      \
-{\
-	ImPlot::PlotLine((sensor.GetName() + " " + units).c_str(), (float*)sensor.Get(), time_stamps.data(), sensor.GetSize());\
-}
-
-/************/
 
 using namespace std::literals::chrono_literals;
 
@@ -21,35 +14,35 @@ UI::UI()
 	:
 	temperature("Температура", "T", -40, 40, 20),
 	current("Ток", "C", 0, 5, 20),
-	voltage("Напряжение", "V", 0, 20, 20)
+	voltage("Напряжение", "V", 0, 20, 20),
+	selected({false, false, false})
 {
-	//ImPlot::PlotS
 	ImGui::GetStyle().WindowBorderSize = 0.0f;
-	ImGui::GetStyle().TabBorderSize = 1.0f;
+	ImGui::GetStyle().TabBorderSize    = 1.0f;
 	ImGui::GetStyle().TabBarBorderSize = 1.0f;
-	ImGui::GetStyle().FrameRounding = 8.0f;
-	ImGui::GetStyle().GrabRounding = 5.0f;
+	ImGui::GetStyle().FrameRounding    = 8.0f;
+	ImGui::GetStyle().GrabRounding     = 5.0f;
 
 	ImVec4* colors = ImGui::GetStyle().Colors;
-	colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
-	colors[ImGuiCol_FrameBg] = ImVec4(0.07f, 0.07f, 0.07f, 0.54f);
-	colors[ImGuiCol_TitleBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_TitleBgActive] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-	colors[ImGuiCol_TabSelected] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-	colors[ImGuiCol_TabHovered] = ImVec4(0.25f, 0.25f, 0.25f, 0.80f);
-	colors[ImGuiCol_Tab] = ImVec4(0.02f, 0.02f, 0.02f, 0.86f);
-	colors[ImGuiCol_Button] = ImVec4(0.55f, 0.47f, 0.03f, 0.91f);
-	colors[ImGuiCol_ButtonHovered] = ImVec4(0.05f, 0.07f, 0.09f, 1.00f);
+	colors[ImGuiCol_WindowBg]       = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+	colors[ImGuiCol_FrameBg]        = ImVec4(0.07f, 0.07f, 0.07f, 0.54f);
+	colors[ImGuiCol_TitleBg]        = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+	colors[ImGuiCol_TitleBgActive]  = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+	colors[ImGuiCol_MenuBarBg]      = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+	colors[ImGuiCol_TabSelected]    = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+	colors[ImGuiCol_TabHovered]     = ImVec4(0.25f, 0.25f, 0.25f, 0.80f);
+	colors[ImGuiCol_Tab]            = ImVec4(0.02f, 0.02f, 0.02f, 0.86f);
+	colors[ImGuiCol_Button]         = ImVec4(0.55f, 0.47f, 0.03f, 0.91f);
+	colors[ImGuiCol_ButtonHovered]  = ImVec4(0.05f, 0.07f, 0.09f, 1.00f);
 	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.17f, 0.18f, 0.19f, 0.40f);
-	colors[ImGuiCol_FrameBgActive] = ImVec4(0.24f, 0.26f, 0.29f, 0.40f);
-	colors[ImGuiCol_CheckMark] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-	colors[ImGuiCol_Button] = ImVec4(0.34f, 0.06f, 0.06f, 0.91f);
-	colors[ImGuiCol_ButtonActive] = ImVec4(0.09f, 0.11f, 0.13f, 1.00f);
-	colors[ImGuiCol_Header] = ImVec4(0.42f, 0.13f, 0.13f, 0.31f);
-	colors[ImGuiCol_HeaderHovered] = ImVec4(0.22f, 0.05f, 0.05f, 0.80f);
-	colors[ImGuiCol_HeaderActive] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
-	colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+	colors[ImGuiCol_FrameBgActive]  = ImVec4(0.24f, 0.26f, 0.29f, 0.40f);
+	colors[ImGuiCol_CheckMark]      = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+	colors[ImGuiCol_Button]         = ImVec4(0.34f, 0.06f, 0.06f, 0.91f);
+	colors[ImGuiCol_ButtonActive]   = ImVec4(0.09f, 0.11f, 0.13f, 1.00f);
+	colors[ImGuiCol_Header]         = ImVec4(0.42f, 0.13f, 0.13f, 0.31f);
+	colors[ImGuiCol_HeaderHovered]  = ImVec4(0.22f, 0.05f, 0.05f, 0.80f);
+	colors[ImGuiCol_HeaderActive]   = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+	colors[ImGuiCol_PopupBg]        = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
 
 	LOG_H("UI");
 	LOG("Colors are set\n");
@@ -75,6 +68,13 @@ void UI::Render(float dt)
 			}
 
 			ImGui::SliderInt("Limit", (int*)&timer.limit, 450, 8000);
+
+			static uint32_t period = 1;
+			ImGui::SliderInt("Period sec", (int*)&period, 1, 10);
+			if (ImGui::Button("Create Log Event"))
+			{
+				timer.AddAction(period, std::bind(&UI::AddLog, this));
+			}
 		}
 
 		ImGui::End();
@@ -90,13 +90,14 @@ void UI::Render(float dt)
 	if (port.IsOpen() && ThreadsAllowed)
 	{
 		timer.NewFrame(dt);
-		timer.Stamp();
 
+		// Синхронизация размеров буферов
 		if (out_buffer.size() > timer.limit)
 		{
 			out_buffer.erase(out_buffer.begin());
 		}
 
+		// Обновление размеров буферов
 		if (timer.limit != out_buffer.size())
 		{
 			if (out_buffer.size() > timer.limit)
@@ -106,6 +107,7 @@ void UI::Render(float dt)
 			}
 		}
 
+		// Добавление новых данных
 		if (choosen_sensor != nullptr)
 		{
 			if (choosen_sensor->GetSize() > 0)
@@ -187,7 +189,7 @@ void UI::ShowMainChart()
 	{
 		if (timer.stamps.size() > 0)
 			ImPlot::SetNextAxesLimits(timer.stamps[0], timer.stamps.back(), 0.0, 1.0, ImPlotCond_Always);
-		if (choosen_sensor != nullptr)
+		if (timer.stamps.size() > 0 && choosen_sensor != nullptr)
 			ImPlot::SetNextAxesLimits(timer.stamps[0], timer.stamps.back(), choosen_sensor->GetMin(), choosen_sensor->GetMax(), ImPlotCond_Always);
 		
 		if (ImPlot::BeginPlot(port.GetName().c_str()))
@@ -338,7 +340,7 @@ void UI::CloseConnection()
 	port.TxData((int8_t*)"out");
 	port.Close();	
 	
-	timer.sum = 0.0f;
+	timer.Reset();
 }
 
 void UI::ReceiveData()
@@ -464,4 +466,43 @@ void UI::PlotTableSensor(Sensor<T>* sensor, const std::string& header, const std
 
 		ImGui::PopID();
 	}
+}
+
+template<typename T>
+T UI::GetLast(const Sensor<T>& sensor)
+{
+	if (!sensor.IsEmpty())
+	{
+		return sensor.GetLast();
+	}
+}
+
+void UI::AddLog()
+{
+	auto thread = std::async(std::launch::async, &UI::AddLogLine, this);
+}
+
+void UI::AddLogLine()
+{
+	LOG_H("UI");
+	LOG("Adding log...\n");
+
+	std::ostringstream oss;
+	
+	std::string stamp = std::to_string(timer.stamps.back());
+	std::replace(stamp.begin(), stamp.end(), '.', ',');
+
+	oss << stamp << "\t" << GetLast(temperature) << "\t" << GetLast(current) << "\t" << GetLast(voltage);
+
+	std::ofstream out;
+	out.open("log.txt", std::ios::app);
+
+	if (out.is_open())
+	{
+		out << oss.str() << std::endl;
+	}
+
+	out.close();
+
+	LOG_END();
 }

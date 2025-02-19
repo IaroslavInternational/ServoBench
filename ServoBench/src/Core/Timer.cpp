@@ -15,9 +15,9 @@ void Timer::NewFrame(float dt)
 	stamps.emplace_back(sum);
 }
 
-void Timer::AddAction(uint16_t period, std::function<void()> e)
+void Timer::AddAction(const log_t& log_data, std::function<void()> e)
 {
-	eventlist.emplace(period, std::pair{ e, uint32_t(sum) });
+	eventlist.emplace(log_data.period / 1000.0f, std::pair{ e, uint32_t(sum) });
 }
 
 void Timer::Reset()
@@ -39,6 +39,12 @@ void Timer::Reset()
 void Timer::StartEvents()
 {
 	IsTerminate = false;
+	
+	for (auto& [period, event_data] : eventlist)
+	{
+		event_data.second = uint32_t(sum);
+	}
+
 	thread = std::async(std::launch::async, &Timer::ProcEvent, this);
 }
 
@@ -54,13 +60,13 @@ void Timer::ProcEvent()
 		// Цикл по всем событиям по таймеру
 		if (!eventlist.empty())
 		{
-			for (auto it = eventlist.begin(); it != eventlist.end(); ++it)
+			for (auto& [period, event_data] : eventlist)
 			{
 				// Если прошёл период по таймеру
-				if (sum / ((float)it->first + it->first * it->second.second) >= 1.0f)
+				if (sum / (period + period * event_data.second) >= 1.0f)
 				{
-					it->second.second++; // увеличть счётчик вызовов
-					it->second.first();  // вызвать ф-ию
+					event_data.second++; // увеличть счётчик вызовов
+					event_data.first();  // вызвать ф-ию
 				}
 			}
 		}

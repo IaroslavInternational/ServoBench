@@ -1,5 +1,7 @@
 #pragma once
 
+#include "data_types.hpp"
+
 #include <functional>
 #include <vector>
 #include <map>
@@ -8,7 +10,7 @@
 struct Timer
 {
 	void NewFrame(float dt);
-	void AddAction(uint16_t period, std::function<void()> e);
+	void AddAction(const log_t& log_data, std::function<void()> e);
 	void Reset();
 	void StartEvents();
 	void ProcEvent();
@@ -17,7 +19,7 @@ struct Timer
 	std::atomic<float> sum = 0.0f;
 	std::vector<float> stamps;
 
-	std::multimap<uint16_t, std::pair<std::function<void()>, uint32_t>> eventlist;
+	std::multimap<float, std::pair<std::function<void()>, uint32_t>> eventlist;
 	std::future<void> thread;
 	std::atomic<bool> IsTerminate = false;
 };

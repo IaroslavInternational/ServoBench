@@ -2,6 +2,7 @@
 
 #include "Core/Window.hpp"
 #include "Core/Timer.hpp"
+#include "Core/data_types.hpp"
 #include "ComPort.hpp"
 
 #include <list>
@@ -13,16 +14,6 @@
 #include <functional>
 
 #include "Sensor.hpp"
-
-struct 
-{
-	union 
-	{
-		uint8_t time_out : 1;
-	} bits;
-
-	uint8_t value;
-} fault;
 
 class UI
 {
@@ -50,8 +41,9 @@ private:
 	template<typename T>
 	T GetLast(const Sensor<T>& sensor);
 private:
-	void AddLog();
-	void AddLogLine();
+	void AddLogThread(const log_t& data);
+	void AddLogLine(const std::string& filename);
+	void InitLog(const log_t& log_data) const;
 private:
 	ComPort             port;		      // Порт
 	std::mutex          mtx;		      // Mutex для управления tasks
@@ -61,6 +53,7 @@ private:
 	std::array<bool, 3> selected;         // Выбранный сигнал для отрисовки
 	task_list_t	        tasks;            // Список команд
 private:
+	fault_t			  fault;				  // Структура состояния подключения к порту
 	std::atomic<bool> ThreadsAllowed = false; // Флаг прерывания потоков RxThread и CmdThread
 	Timer		      timer;				  // Таймер
 private:

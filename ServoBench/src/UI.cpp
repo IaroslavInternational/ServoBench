@@ -1,8 +1,8 @@
 #include "UI.hpp"
 
 #include "CoreLog.hpp"
-#include "Core/data_types.hpp"
 #include "Core/lib.hpp"
+#include "../imgui/imgui_internal.h"
 
 #include <sstream>
 #include <fstream>
@@ -11,6 +11,27 @@
 #pragma execution_character_set("utf-8")  // Для отображения на русском языке
 
 using namespace std::literals::chrono_literals;
+
+namespace ImGui
+{
+	bool SliderFloatWithSteps(const char* label, float* v, float v_min, float v_max, float v_step, const char* display_format)
+	{
+		if (!display_format)
+			display_format = "%.3f";
+
+		char text_buf[64] = {};
+		ImFormatString(text_buf, IM_ARRAYSIZE(text_buf), display_format, *v);
+
+		// Map from [v_min,v_max] to [0,N]
+		const int countValues = int((v_max - v_min) / v_step);
+		int v_i = int((*v - v_min) / v_step);
+		const bool value_changed = SliderInt(label, &v_i, 0, countValues, text_buf);
+
+		// Remap from [0,N] to [v_min,v_max]
+		*v = v_min + float(v_i) * v_step;
+		return value_changed;
+	}
+}
 
 UI::UI()
 	:
@@ -48,24 +69,6 @@ UI::UI()
 
 	LOG_H("UI");
 	LOG("Colors are set\n");
-	LOG("Log file init\n");
-
-	remove("log.txt");
-
-	std::ostringstream oss;
-	oss << "Файл отчёта Servo Bench\n";
-	oss << "Дата: " << std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()} << "\n\n";
-	oss << "Время\t" << "Температура\t" << "Ток\t" << "Напряжение\t\n";
-
-	std::ofstream out;
-	out.open("log.txt");
-
-	if (out.is_open())
-	{
-		out << oss.str() << std::endl;
-	}
-
-	out.close();
 
 	LOG_END();
 }
@@ -73,7 +76,7 @@ UI::UI()
 void UI::Render(float dt)
 {
 	//ImPlot::ShowDemoWindow();
-	//ImGui::ShowDemoWindow();
+	ImGui::ShowDemoWindow();
 	SetPanelSizeAndPosition(0, 0.2f, 1.0f, 0.0f, 0.0f);
 	ShowLeftPanel();
 	
@@ -94,8 +97,8 @@ void UI::Render(float dt)
 			ImGui::SliderInt("Period sec", (int*)&period, 1, 10);
 			if (ImGui::Button("Create Log Event"))
 			{
-				timer.AddAction(period, std::bind(&UI::AddLog, this));
-				timer.StartEvents();
+				//timer.AddAction(period, std::bind(&UI::AddLog, this));
+				//timer.StartEvents();
 			}
 		}
 
@@ -147,6 +150,51 @@ void UI::ShowLeftPanel()
 	{
 		if (ImGui::BeginTabBar("Main bar"))
 		{
+			if (ImGui::BeginTabItem("Лог"))
+			{
+				static log_t log_data;
+				static bool flag = false;
+
+				if (ImGui::InputText("Имя", (char*)log_data.name.c_str(), log_data.name.capacity()))
+				{
+					flag = false;
+					log_data.name = log_data.name.c_str();
+				}
+
+				if (flag)
+				{
+					ImGui::TextColored({ 1.0f,0.0f,0.0f,1.0f }, "Введите имя файла");
+				}
+
+				ImGui::SliderFloatWithSteps("Период, мс", &log_data.period, 100.0f, 10000.0f, 100.0f, "%.0f");
+
+				if (ImGui::Button("Создать лог"))
+				{
+					if (log_data.name.empty())
+					{
+						flag = true;
+					}
+					else
+					{
+						InitLog(log_data);
+						timer.AddAction(log_data, std::bind(&UI::AddLogThread, this, log_data));
+					}
+				}
+
+				if (ImGui::Button("Запустить"))
+				{
+					timer.StartEvents();
+				}
+				
+				ImGui::Text("Созданные логи:");
+				for (auto& [period, event_data] : timer.eventlist)
+				{
+					ImGui::BulletText(("Лог " + std::to_string(int(period * 1000.0f)) + "ms").c_str());
+				}
+
+				ImGui::EndTabItem();
+			}
+
 			if (ImGui::BeginTabItem("Подключение"))
 			{
 				auto ports = getAvailablePorts();
@@ -493,15 +541,15 @@ T UI::GetLast(const Sensor<T>& sensor)
 	}
 }
 
-void UI::AddLog()
+void UI::AddLogThread(const log_t& data)
 {
-	auto thread = std::async(std::launch::async, &UI::AddLogLine, this);
+	auto thread = std::async(std::launch::async, &UI::AddLogLine, this, data.name);
 }
 
-void UI::AddLogLine()
+void UI::AddLogLine(const std::string& filename)
 {
 	LOG_H("UI");
-	LOG("Adding log...\n");
+	LOG("Adding log in " + filename + "\n");
 
 	std::ostringstream oss;
 	
@@ -511,7 +559,32 @@ void UI::AddLogLine()
 	oss << stamp << "\t" << GetLast(temperature) << "\t" << GetLast(current) << "\t" << GetLast(voltage);
 
 	std::ofstream out;
-	out.open("log.txt", std::ios::app);
+	out.open(filename + ".txt", std::ios::app);
+
+	if (out.is_open())
+	{
+		out << oss.str() << std::endl;
+	}
+
+	out.close();
+
+	LOG_END();
+}
+
+void UI::InitLog(const log_t& log_data) const
+{
+	LOG_H("UI");
+	LOG("Log file init " + log_data.name + "\n");
+
+	remove((log_data.name + ".txt").c_str());
+
+	std::ostringstream oss;
+	oss << "Файл отчёта " << log_data.name << " Servo Bench\n";
+	oss << "Дата: " << std::chrono::zoned_time{ std::chrono::current_zone(), std::chrono::system_clock::now() } << "\n\n";
+	oss << "Время\t" << "Температура\t" << "Ток\t" << "Напряжение\t\n";
+
+	std::ofstream out;
+	out.open(log_data.name + ".txt");
 
 	if (out.is_open())
 	{

@@ -2,9 +2,11 @@
 
 #include "CoreLog.hpp"
 #include "Core/data_types.hpp"
+#include "Core/lib.hpp"
 
 #include <sstream>
 #include <fstream>
+#include <chrono>
 
 #pragma execution_character_set("utf-8")  // Для отображения на русском языке
 
@@ -46,6 +48,25 @@ UI::UI()
 
 	LOG_H("UI");
 	LOG("Colors are set\n");
+	LOG("Log file init\n");
+
+	remove("log.txt");
+
+	std::ostringstream oss;
+	oss << "Файл отчёта Servo Bench\n";
+	oss << "Дата: " << std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()} << "\n\n";
+	oss << "Время\t" << "Температура\t" << "Ток\t" << "Напряжение\t\n";
+
+	std::ofstream out;
+	out.open("log.txt");
+
+	if (out.is_open())
+	{
+		out << oss.str() << std::endl;
+	}
+
+	out.close();
+
 	LOG_END();
 }
 
@@ -74,6 +95,7 @@ void UI::Render(float dt)
 			if (ImGui::Button("Create Log Event"))
 			{
 				timer.AddAction(period, std::bind(&UI::AddLog, this));
+				timer.StartEvents();
 			}
 		}
 
@@ -332,7 +354,7 @@ void UI::CloseConnection()
 	ThreadsAllowed = false;
 
 	// Каждые 50мс ожидаем завершения потоков и закрываем порт
-	while (!IsThreadTerminated(RxThread) && !IsThreadTerminated(CmdThread))
+	while (!lib::IsThreadTerminated(RxThread) && !lib::IsThreadTerminated(CmdThread))
 	{
 		std::this_thread::sleep_for(50ms);
 	}
@@ -405,12 +427,6 @@ void UI::GetCmd()
 			mtx.unlock();
 		}		
 	}
-}
-
-template<typename T>
-bool UI::IsThreadTerminated(std::future<T>& t)
-{
-	return t.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
 template<typename T>

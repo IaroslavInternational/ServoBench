@@ -42,8 +42,6 @@ private:
 	void		   ReceiveData();						    // Функция получения данных в бесконечном цикле -- в отдельном потоке RxThread
 	void		   DataProc(buffer_t* pData);				// Функция обработки данных (из ReceiveData)
 	void		   GetCmd();								// Функция парсинга комманд в бесконечном цикле -- в отдельном потоке CmdThread
-	template<typename T>
-	bool		   IsThreadTerminated(std::future<T>& t);   // Информация о завершённости потока
 private:
 	// Функция добавления графика в таблицу
 	template<typename T>

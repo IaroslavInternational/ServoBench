@@ -7,6 +7,7 @@
 #include <sstream>
 #include <fstream>
 #include <chrono>
+#include <filesystem>
 
 #pragma execution_character_set("utf-8")  // Для отображения на русском языке
 
@@ -71,6 +72,8 @@ UI::UI()
 	LOG("Colors are set\n");
 
 	LOG_END();
+
+	std::filesystem::create_directory("log");
 }
 
 void UI::Render(float dt)
@@ -175,21 +178,39 @@ void UI::ShowLeftPanel()
 						flag = true;
 					}
 					else
+					{						
+						if (timer.AddAction(log_data, std::bind(&UI::AddLogThread, this, log_data)))
+						{
+							InitLog(log_data);
+							match_log.emplace(log_data.period / 1000.0f, log_data.name);
+						}
+					}
+				}
+				
+				if (timer.eventlist.size() != 0)
+				{
+					ImGui::SameLine();
+
+					if (ImGui::Button("Запустить"))
 					{
-						InitLog(log_data);
-						timer.AddAction(log_data, std::bind(&UI::AddLogThread, this, log_data));
+						timer.StartEvents();
 					}
 				}
 
-				if (ImGui::Button("Запустить"))
-				{
-					timer.StartEvents();
-				}
-				
 				ImGui::Text("Созданные логи:");
 				for (auto& [period, event_data] : timer.eventlist)
 				{
 					ImGui::BulletText(("Лог " + std::to_string(int(period * 1000.0f)) + "ms").c_str());
+					ImGui::SameLine();
+					ImGui::PushID(("##" + std::to_string(period)).c_str());
+					if (ImGui::SmallButton("-"))
+					{
+						std::filesystem::remove_all("log\\" + match_log[period] + "\\");
+						timer.eventlist.erase(period);
+						ImGui::PopID();
+						break;
+					}
+					ImGui::PopID();
 				}
 
 				ImGui::EndTabItem();
@@ -559,7 +580,7 @@ void UI::AddLogLine(const std::string& filename)
 	oss << stamp << "\t" << GetLast(temperature) << "\t" << GetLast(current) << "\t" << GetLast(voltage);
 
 	std::ofstream out;
-	out.open(filename + ".txt", std::ios::app);
+	out.open("log\\" + filename + "\\" + filename + ".txt", std::ios::app);
 
 	if (out.is_open())
 	{
@@ -574,17 +595,19 @@ void UI::AddLogLine(const std::string& filename)
 void UI::InitLog(const log_t& log_data) const
 {
 	LOG_H("UI");
-	LOG("Log file init " + log_data.name + "\n");
+	LOG("Log file init log\\" + log_data.name + "\n");
 
-	remove((log_data.name + ".txt").c_str());
+	std::filesystem::remove_all("log\\" + log_data.name);
+	std::filesystem::create_directory("log\\"+log_data.name);
 
 	std::ostringstream oss;
 	oss << "Файл отчёта " << log_data.name << " Servo Bench\n";
-	oss << "Дата: " << std::chrono::zoned_time{ std::chrono::current_zone(), std::chrono::system_clock::now() } << "\n\n";
+	oss << "Дата: " << std::chrono::zoned_time{ std::chrono::current_zone(), std::chrono::system_clock::now() } << "\n";
+	oss << "Период:\t" << log_data.period << "мс\n\n";
 	oss << "Время\t" << "Температура\t" << "Ток\t" << "Напряжение\t\n";
 
 	std::ofstream out;
-	out.open(log_data.name + ".txt");
+	out.open("log\\" + log_data.name + "\\" + log_data.name + ".txt");
 
 	if (out.is_open())
 	{

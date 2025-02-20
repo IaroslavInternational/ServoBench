@@ -56,6 +56,7 @@ private:
 	fault_t			  fault;				  // Структура состояния подключения к порту
 	std::atomic<bool> ThreadsAllowed = false; // Флаг прерывания потоков RxThread и CmdThread
 	Timer		      timer;				  // Таймер
+	std::map<float, std::string> match_log;
 private:
 	Sensor<float> temperature; // Датчик температуры
 	Sensor<float> current;	   // Датчик тока

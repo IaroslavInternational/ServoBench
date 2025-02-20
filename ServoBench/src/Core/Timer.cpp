@@ -15,9 +15,13 @@ void Timer::NewFrame(float dt)
 	stamps.emplace_back(sum);
 }
 
-void Timer::AddAction(const log_t& log_data, std::function<void()> e)
-{
+bool Timer::AddAction(const log_t& log_data, std::function<void()> e)
+{	
+	const uint64_t pre_size = eventlist.size();
 	eventlist.emplace(log_data.period / 1000.0f, std::pair{ e, uint32_t(sum) });
+	const uint64_t post_size = eventlist.size();
+
+	return pre_size != post_size;
 }
 
 void Timer::Reset()

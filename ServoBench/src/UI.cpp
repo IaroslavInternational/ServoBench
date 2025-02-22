@@ -96,12 +96,9 @@ void UI::Render(float dt)
 
 			ImGui::SliderInt("Limit", (int*)&timer.limit, 450, 8000);
 
-			static uint32_t period = 1;
-			ImGui::SliderInt("Period sec", (int*)&period, 1, 10);
-			if (ImGui::Button("Create Log Event"))
+			if (ImGui::Button("Save Charts"))
 			{
-				//timer.AddAction(period, std::bind(&UI::AddLog, this));
-				//timer.StartEvents();
+				system("python scripts/plot_log.py log/log_500/log_500.txt");
 			}
 		}
 

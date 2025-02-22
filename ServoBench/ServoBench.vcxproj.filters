@@ -124,6 +124,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\scripts\plot_log.py" />
+    <None Include="scripts\plot_log.py" />
   </ItemGroup>
 </Project>

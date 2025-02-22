@@ -171,7 +171,7 @@
     <ClInclude Include="src\Core\Timer.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\scripts\plot_log.py" />
+    <None Include="scripts\plot_log.py" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

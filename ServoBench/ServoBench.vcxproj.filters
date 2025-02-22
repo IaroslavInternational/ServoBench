@@ -123,4 +123,7 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="src\scripts\plot_log.py" />
+  </ItemGroup>
 </Project>

@@ -12,4 +12,6 @@ namespace lib
 	{
 		return t.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 	}
+
+
 }

@@ -79,7 +79,7 @@ UI::UI()
 void UI::Render(float dt)
 {
 	//ImPlot::ShowDemoWindow();
-	ImGui::ShowDemoWindow();
+	//ImGui::ShowDemoWindow();
 	SetPanelSizeAndPosition(0, 0.2f, 1.0f, 0.0f, 0.0f);
 	ShowLeftPanel();
 	
@@ -98,7 +98,13 @@ void UI::Render(float dt)
 
 			if (ImGui::Button("Save Charts"))
 			{
-				system("python scripts/plot_log.py log/log_500/log_500.txt");
+				std::string base = "python scripts/plot_log.py log/";
+
+				for (auto& [period, event_data] : timer.eventlist)
+				{
+					system((base + match_log[period] + "/" + match_log[period] + ".txt").c_str());
+				}
+				//system("python scripts/plot_log.py log/log_500/log_500.txt");
 			}
 		}
 
@@ -200,6 +206,11 @@ void UI::ShowLeftPanel()
 					ImGui::BulletText(("ÀÓ„ " + std::to_string(int(period * 1000.0f)) + "ms").c_str());
 					ImGui::SameLine();
 					ImGui::PushID(("##" + std::to_string(period)).c_str());
+					if (ImGui::SmallButton("Stop"))
+					{
+
+					}
+					ImGui::SameLine();
 					if (ImGui::SmallButton("-"))
 					{
 						std::filesystem::remove_all("log\\" + match_log[period] + "\\");
@@ -428,6 +439,13 @@ void UI::CloseConnection()
 	port.TxData((int8_t*)"out");
 	port.Close();	
 	
+	std::string base = "python scripts/plot_log.py log/";
+
+	for (auto& [period, event_data] : timer.eventlist)
+	{
+		system((base + match_log[period] + "/" + match_log[period] + ".txt").c_str());
+	}
+
 	timer.Reset();
 }
 

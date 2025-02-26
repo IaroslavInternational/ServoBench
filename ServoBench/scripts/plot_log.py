@@ -33,27 +33,29 @@ def log2dict(filename: str):
 
 def main(filename):
     out = log2dict(filename)
-
+    filename = filename.replace(".txt","")
+    filename = filename.split("/")
+    
     time_series = out['Время']
     out.pop('Время')
 
     plt.clf()
 
     fig, axs = plt.subplots(len(out), 1)
-    axs[0].set_title(filename.replace('.txt',''))
+    axs[0].set_title(filename[-1])
 
     for (header, arr), ax in zip(out.items(), axs):
-        z = numpy.polyfit(time_series, arr, 2)
-        p = numpy.poly1d(z)
+        #z = numpy.polyfit(time_series, arr, 2)
+        #p = numpy.poly1d(z)
         ax.plot(time_series, arr, label=header)
-        ax.plot(time_series, p(arr), '--', alpha=0.7)
+        #ax.plot(time_series, p(arr), '--', alpha=0.7)
         ax.set_xlim(time_series[0], time_series[-1])
         ax.grid()    
-        ax.legend()
+        ax.legend(loc='upper right')
         ax.set_xlabel(f'Время, с')
 
     os.makedirs('Графики', exist_ok=True)
-    plt.savefig(f'Графики/plot.png')
+    plt.savefig(f'Графики/{filename[-1]}.png')
 
 if __name__ == '__main__':
     arg = sys.argv[1]

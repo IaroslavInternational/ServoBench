@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Window">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CACBMAAAAAgAAAAEAoAAABAAAQAAAAAAAADACAgAAAA=</HashCode>
+      <FileName>src\Core\Window.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="App">
+    <Position X="2.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AASAAAAAAAAAEAAAAAAAAAAAEAAAAAAAAAAAAAAgAAA=</HashCode>
+      <FileName>src\Core\App.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ComPort">
+    <Position X="11" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>KBAEAAAAAAAAIQAAIgCAAFAAABAEAQAgAABAAACABAA=</HashCode>
+      <FileName>src\ComPort.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Sensor&lt;T&gt;">
+    <Position X="13" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABJAEAIJBQAAAADAAAAAAAAAAAAEAAAAAAAQABAAhQA=</HashCode>
+      <FileName>src\Sensor.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="UI">
+    <Position X="8.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AgRAABYAAIAAAACAAAAAUJCAkAAEBEgAjBQgADACEEA=</HashCode>
+      <FileName>src\UI.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Struct Name="Timer">
+    <Position X="6.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAABAEIAAAABAkAAAAAAAAAAAEAAACAAAAACAIgAAA=</HashCode>
+      <FileName>src\Core\Timer.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="FrameTimer">
+    <Position X="4.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAACAAAAAAAA=</HashCode>
+      <FileName>src\Core\App.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

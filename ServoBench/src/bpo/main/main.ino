@@ -6,6 +6,13 @@
 
 #include <Arduino.h>
 
+#include "OneWire.h"
+#include "DallasTemperature.h"
+
+bool IsTempOut = false;
+OneWire oneWire(2);  
+DallasTemperature ds(&oneWire);
+
 typedef unsigned char      uint8_t;
 typedef unsigned long long uint64_t;
 
@@ -61,7 +68,8 @@ String GetRandom(int min, int max)
 // Функция выдачи данных о температуре
 void EchoTemperature()
 {
-    OUTPORT("T", GetRandom(20, 23));
+    IsTempOut = true;
+    OUTPORT("T", ds.getTempCByIndex(0));
 }
 
 // Функция выдачи данных о напряжении
@@ -109,6 +117,8 @@ void disp_5000ms()
 void setup()
 {
     randomSeed(analogRead(0)); // Debug random seed
+    ds.begin();
+    ds.setResolution(9);
 
     // Настройка порта передачи данных
     Serial.begin(38400);
@@ -149,6 +159,12 @@ void setup()
     // Основной цикл
     while (!false)
     {
+        if (IsTempOut)
+        {
+            ds.requestTemperatures();
+            IsTempOut = false;
+        }
+
         if (Serial.available() > 0)
         {
             memset(input_buffer, '\0', 64);

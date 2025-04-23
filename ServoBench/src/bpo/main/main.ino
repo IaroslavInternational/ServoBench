@@ -9,10 +9,6 @@
 #include "OneWire.h"
 #include "DallasTemperature.h"
 
-bool IsTempOut = false;
-OneWire oneWire(2);  
-DallasTemperature ds(&oneWire);
-
 typedef unsigned char      uint8_t;
 typedef unsigned long long uint64_t;
 
@@ -24,6 +20,17 @@ typedef unsigned long long uint64_t;
 #define _1000ms 1000  // 1000 мс
 #define _2000ms 2000  // 2000 мс
 #define _5000ms 5000  // 5000 мс
+
+#define ENC_A 2       // пин энкодера
+#define ENC_B 3       // пин энкодера
+
+volatile int encCounter;
+volatile boolean flag, resetFlag;
+volatile byte curState, prevState;
+
+bool IsTempOut = false;
+OneWire oneWire(2);
+DallasTemperature ds(&oneWire);
 
 // Структура диспетчера
 struct dispatch
@@ -84,14 +91,39 @@ void EchoCurrent()
     OUTPORT("C", GetRandom(1, 5));
 }
 
+// Функция выдачи данных энкодера
+void EchoEncoder()
+{
+    OUTPORT("E", encCounter / 10);
+}
+
 /**********************************/
+
+void int0() 
+{
+    encTick();
+}
+
+void encTick() 
+{
+    curState = digitalRead(ENC_A) | digitalRead(ENC_B) << 1; 
+    if (resetFlag && curState == 0b11) 
+    {
+        if (prevState == 0b10) encCounter++;
+        if (prevState == 0b01) encCounter--;
+        resetFlag = 0;
+        flag = true;
+    }
+    if (curState == 0b00) resetFlag = 1;
+    prevState = curState;
+}
 
 /* ДИСПЕТЧЕРЫ ЦИКЛОВ */
 
 // Диспетчер 100мс
 void disp_100ms()
 {
-    EchoTemperature();
+    EchoEncoder();
 }
 
 // Диспетчер 500мс
@@ -102,6 +134,7 @@ void disp_500ms()
 // Диспетчер 1000мс
 void disp_1000ms()
 {
+    EchoTemperature();
     EchoCurrent();
     EchoVoltage();
 }
@@ -123,6 +156,9 @@ void setup()
     // Настройка порта передачи данных
     Serial.begin(38400);
     Serial.setTimeout(10);
+
+    attachInterrupt(0, int0, CHANGE);
+    attachInterrupt(1, int0, CHANGE);
 
     {
         char   test_buffer[64];

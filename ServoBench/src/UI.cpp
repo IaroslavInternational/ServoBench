@@ -39,6 +39,7 @@ UI::UI()
 	temperature("Температура", "T", -40, 40, 20),
 	current("Ток", "C", 0, 5, 20),
 	voltage("Напряжение", "V", 0, 20, 20),
+	encoder("Энкодер", "E", -360, 360, 20),
 	selected({false, false, false})
 {
 	ImGui::GetStyle().WindowBorderSize = 0.0f;
@@ -337,6 +338,9 @@ void UI::ShowTable()
 			colors = 2;
 			PlotTableSensor(&voltage, "Напряжение", "V", "%.2f", colors);
 
+			colors = 3;
+			PlotTableSensor(&encoder, "Энкодер", "E", "%.1f", colors);
+
 			ImPlot::PopColormap();
 			ImGui::EndTable();
 		}
@@ -504,6 +508,10 @@ void UI::GetCmd()
 			{
 				tasks.pop();
 			}
+			else if (encoder.Add(cmd))
+			{
+				tasks.pop();
+			}
 			else
 			{
 				tasks.pop(); // force pop of uncorrect cmd
@@ -592,7 +600,7 @@ void UI::AddLogLine(const std::string& filename)
 	std::string stamp = std::to_string(timer.stamps.back());
 	std::replace(stamp.begin(), stamp.end(), '.', ',');
 
-	oss << stamp << "\t" << GetLast(temperature) << "\t" << GetLast(current) << "\t" << GetLast(voltage);
+	oss << stamp << "\t" << GetLast(temperature) << "\t" << GetLast(current) << "\t" << GetLast(voltage) << "\t" << GetLast(encoder);
 
 	std::ofstream out;
 	out.open("log\\" + filename + "\\" + filename + ".txt", std::ios::app);

@@ -61,6 +61,7 @@ private:
 	Sensor<float> temperature; // Датчик температуры
 	Sensor<float> current;	   // Датчик тока
 	Sensor<float> voltage;	   // Датчик напряжения
+	Sensor<float> encoder;	   // Датчик 
 
 	Sensor<float>*     choosen_sensor = nullptr; // Выбранный датчик для отрисовки на главный график
 	std::vector<float> out_buffer;				 // Буфер данных для отрисовки данных на главный график

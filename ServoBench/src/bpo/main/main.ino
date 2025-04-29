@@ -29,7 +29,7 @@ volatile boolean flag, resetFlag;
 volatile byte curState, prevState;
 
 bool IsTempOut = false;
-OneWire oneWire(2);
+OneWire oneWire(5);
 DallasTemperature ds(&oneWire);
 
 // Структура диспетчера
@@ -76,7 +76,8 @@ String GetRandom(int min, int max)
 void EchoTemperature()
 {
     IsTempOut = true;
-    OUTPORT("T", ds.getTempCByIndex(0));
+    OUTPORT("T1", ds.getTempCByIndex(0));
+    OUTPORT("T2", ds.getTempCByIndex(1));
 }
 
 // Функция выдачи данных о напряжении

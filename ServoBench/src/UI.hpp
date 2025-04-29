@@ -58,7 +58,8 @@ private:
 	Timer		      timer;				  // Таймер
 	std::map<float, std::string> match_log;
 private:
-	Sensor<float> temperature; // Датчик температуры
+	Sensor<float> temperature1; // Датчик температуры
+	Sensor<float> temperature2; // Датчик температуры
 	Sensor<float> current;	   // Датчик тока
 	Sensor<float> voltage;	   // Датчик напряжения
 	Sensor<float> encoder;	   // Датчик 

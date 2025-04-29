@@ -36,7 +36,8 @@ namespace ImGui
 
 UI::UI()
 	:
-	temperature("Температура", "T", -40, 40, 20),
+	temperature1("Температура", "T1", -40, 40, 20),
+	temperature2("Температура", "T2", -40, 40, 20),
 	current("Ток", "C", 0, 5, 20),
 	voltage("Напряжение", "V", 0, 20, 20),
 	encoder("Энкодер", "E", -360, 360, 20),
@@ -330,15 +331,18 @@ void UI::ShowTable()
 
 			// Не менять цвета
 			colors = 0;
-			PlotTableSensor(&temperature, "Температура", "°C", "%.2f", colors);
+			PlotTableSensor(&temperature1, "Температура 1", "°C", "%.2f", colors);
 
 			colors = 1;
-			PlotTableSensor(&current, "Ток", "A", "%.2f", colors);
+			PlotTableSensor(&temperature2, "Температура 2", "°C", "%.2f", colors);
 
 			colors = 2;
-			PlotTableSensor(&voltage, "Напряжение", "V", "%.2f", colors);
+			PlotTableSensor(&current, "Ток", "A", "%.2f", colors);
 
 			colors = 3;
+			PlotTableSensor(&voltage, "Напряжение", "V", "%.2f", colors);
+
+			colors = 4;
 			PlotTableSensor(&encoder, "Энкодер", "E", "%.1f", colors);
 
 			ImPlot::PopColormap();
@@ -496,8 +500,12 @@ void UI::GetCmd()
 			mtx.lock();
 			cmd = tasks.front();
 			
-			if (temperature.Add(cmd))
+			if (temperature1.Add(cmd))
 			{	
+				tasks.pop();
+			}
+			else if (temperature2.Add(cmd))
+			{
 				tasks.pop();
 			}
 			else if (current.Add(cmd))
@@ -600,7 +608,7 @@ void UI::AddLogLine(const std::string& filename)
 	std::string stamp = std::to_string(timer.stamps.back());
 	std::replace(stamp.begin(), stamp.end(), '.', ',');
 
-	oss << stamp << "\t" << GetLast(temperature) << "\t" << GetLast(current) << "\t" << GetLast(voltage) << "\t" << GetLast(encoder);
+	oss << stamp << "\t" << GetLast(temperature1) << "\t" << GetLast(temperature2) << "\t" << GetLast(current) << "\t" << GetLast(voltage) << "\t" << GetLast(encoder);
 
 	std::ofstream out;
 	out.open("log\\" + filename + "\\" + filename + ".txt", std::ios::app);

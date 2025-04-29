@@ -36,12 +36,13 @@ namespace ImGui
 
 UI::UI()
 	:
-	temperature1("Температура", "T1", -40, 40, 20),
-	temperature2("Температура", "T2", -40, 40, 20),
+	temperature1("Температура", "T1", -50, 50, 20),
+	temperature2("Температура", "T2", -50, 50, 20),
 	current("Ток", "C", 0, 5, 20),
 	voltage("Напряжение", "V", 0, 20, 20),
-	encoder("Энкодер", "E", -360, 360, 20),
-	selected({false, false, false})
+	encoder("Энкодер", "E", -370, 370, 20),
+	humidity("Влажность", "H", 0, 105, 20),
+	selected({false, false, false, false, false, false})
 {
 	ImGui::GetStyle().WindowBorderSize = 0.0f;
 	ImGui::GetStyle().TabBorderSize    = 1.0f;
@@ -334,15 +335,18 @@ void UI::ShowTable()
 			PlotTableSensor(&temperature1, "Температура 1", "°C", "%.2f", colors);
 
 			colors = 1;
-			PlotTableSensor(&temperature2, "Температура 2", "°C", "%.2f", colors);
-
+			PlotTableSensor(&temperature2, "Температура 2", "°C", "%.2f", colors);		
+			
 			colors = 2;
-			PlotTableSensor(&current, "Ток", "A", "%.2f", colors);
+			PlotTableSensor(&humidity, "Влажность", "%", "%.2f", colors);
 
 			colors = 3;
-			PlotTableSensor(&voltage, "Напряжение", "V", "%.2f", colors);
+			PlotTableSensor(&current, "Ток", "A", "%.2f", colors);
 
 			colors = 4;
+			PlotTableSensor(&voltage, "Напряжение", "V", "%.2f", colors);
+
+			colors = 5;
 			PlotTableSensor(&encoder, "Энкодер", "E", "%.1f", colors);
 
 			ImPlot::PopColormap();
@@ -508,6 +512,10 @@ void UI::GetCmd()
 			{
 				tasks.pop();
 			}
+			else if (humidity.Add(cmd))
+			{
+				tasks.pop();
+			}
 			else if (current.Add(cmd))
 			{
 				tasks.pop();
@@ -575,8 +583,9 @@ void UI::PlotTableSensor(Sensor<T>* sensor, const std::string& header, const std
 				selected[colors] = false;
 			}
 
+			float new_value = (choosen_sensor->GetSize() > 0) ? choosen_sensor->GetLast() : 0.0f;
 			out_buffer.clear();
-			out_buffer.resize(timer.limit);
+			out_buffer.resize(timer.limit, new_value);
 
 		}
 
@@ -608,7 +617,9 @@ void UI::AddLogLine(const std::string& filename)
 	std::string stamp = std::to_string(timer.stamps.back());
 	std::replace(stamp.begin(), stamp.end(), '.', ',');
 
-	oss << stamp << "\t" << GetLast(temperature1) << "\t" << GetLast(temperature2) << "\t" << GetLast(current) << "\t" << GetLast(voltage) << "\t" << GetLast(encoder);
+	oss << stamp << "\t" << GetLast(temperature1) << "\t" << GetLast(temperature2) << "\t" 
+						 << GetLast(humidity)	  << "\t" << GetLast(current)      << "\t" 
+					     << GetLast(voltage)	  << "\t" << GetLast(encoder);
 
 	std::ofstream out;
 	out.open("log\\" + filename + "\\" + filename + ".txt", std::ios::app);

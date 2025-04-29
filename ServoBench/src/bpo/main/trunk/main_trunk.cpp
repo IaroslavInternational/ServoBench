@@ -5,6 +5,7 @@
 */
 
 #include <Arduino.h>
+#include "DHT.h"     
 
 #include "OneWire.h"
 #include "DallasTemperature.h"
@@ -31,6 +32,8 @@ volatile byte curState, prevState;
 bool IsTempOut = false;
 OneWire oneWire(5);
 DallasTemperature ds(&oneWire);
+
+DHT dht(6, DHT22);
 
 // Структура диспетчера
 struct dispatch
@@ -78,6 +81,12 @@ void EchoTemperature()
     IsTempOut = true;
     OUTPORT("T1", ds.getTempCByIndex(0));
     OUTPORT("T2", ds.getTempCByIndex(1));
+}
+
+// Функция выдачи данных о влажности
+void EchoHumidity()
+{
+    OUTPORT("H", dht.readHumidity());
 }
 
 // Функция выдачи данных о напряжении
@@ -136,6 +145,7 @@ void disp_500ms()
 void disp_1000ms()
 {
     EchoTemperature();
+    EchoHumidity();
     EchoCurrent();
     EchoVoltage();
 }
@@ -143,7 +153,6 @@ void disp_1000ms()
 // Диспетчер 5000мс
 void disp_5000ms()
 {
-
 }
 
 /*********************/
@@ -153,6 +162,10 @@ void setup()
     randomSeed(analogRead(0)); // Debug random seed
     ds.begin();
     ds.setResolution(9);
+    dht.begin();
+
+    pinMode(12, OUTPUT);
+    digitalWrite(12, HIGH);
 
     // Настройка порта передачи данных
     Serial.begin(38400);

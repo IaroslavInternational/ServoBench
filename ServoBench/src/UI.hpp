@@ -50,7 +50,7 @@ private:
 	std::future<void>   ConnectionThread; // Асинхронный поток подключения к порту
 	std::future<void>   RxThread;         // Асинхронный поток приёма данных
 	std::future<void>   CmdThread;        // Асинхронный поток обработки данных
-	std::array<bool, 3> selected;         // Выбранный сигнал для отрисовки
+	std::array<bool, 6> selected;         // Выбранный сигнал для отрисовки
 	task_list_t	        tasks;            // Список команд
 private:
 	fault_t			  fault;				  // Структура состояния подключения к порту
@@ -62,7 +62,8 @@ private:
 	Sensor<float> temperature2; // Датчик температуры
 	Sensor<float> current;	   // Датчик тока
 	Sensor<float> voltage;	   // Датчик напряжения
-	Sensor<float> encoder;	   // Датчик 
+	Sensor<float> encoder;	   // Датчик энкодер
+	Sensor<float> humidity;	   // Датчик влажности
 
 	Sensor<float>*     choosen_sensor = nullptr; // Выбранный датчик для отрисовки на главный график
 	std::vector<float> out_buffer;				 // Буфер данных для отрисовки данных на главный график

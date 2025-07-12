@@ -42,7 +42,8 @@ UI::UI()
 	voltage("Напряжение", "V", 0, 20, 20),
 	encoder("Энкодер", "E", -370, 370, 20),
 	humidity("Влажность", "H", 0, 105, 20),
-	selected({false, false, false, false, false, false})
+	moment("Момент", "HX", -3000, 3000, 20),
+	selected({false, false, false, false, false, false, false})
 {
 	ImGui::GetStyle().WindowBorderSize = 0.0f;
 	ImGui::GetStyle().TabBorderSize    = 1.0f;
@@ -99,15 +100,14 @@ void UI::Render(float dt)
 
 			ImGui::SliderInt("Limit", (int*)&timer.limit, 450, 8000);
 
-			if (ImGui::Button("Save Charts"))
-			{
-				std::string base = "python scripts/plot_log.py log/";
+			ImGui::SliderInt("Test Servo", &servo_angle, 1000, 2000);
 
-				for (auto& [period, event_data] : timer.eventlist)
-				{
-					system((base + match_log[period] + "/" + match_log[period] + ".txt").c_str());
-				}
-				//system("python scripts/plot_log.py log/log_500/log_500.txt");
+			if (ImGui::Button(("Set " + std::to_string(servo_angle)).c_str()))
+			{
+				static signed char msg_out[20];
+				std::string msg = "S_" + std::to_string(int(servo_angle));
+				memcpy(msg_out, msg.c_str(), msg.size());
+				port.TxData(msg_out);
 			}
 		}
 
@@ -251,7 +251,7 @@ void UI::ShowLeftPanel()
 				if (fault.bits.time_out)
 				{
 					ImGui::Text(("Не удалось подключиться к " + names[item_current]).c_str());
-					return;
+					//return;
 				}
 				else
 				{
@@ -347,7 +347,10 @@ void UI::ShowTable()
 			PlotTableSensor(&voltage, "Напряжение", "V", "%.2f", colors);
 
 			colors = 5;
-			PlotTableSensor(&encoder, "Энкодер", "E", "%.1f", colors);
+			PlotTableSensor(&encoder, "Энкодер", "°", "%.1f", colors);
+
+			colors = 6;
+			PlotTableSensor(&moment, "Момент", "-", "%.1f", colors);
 
 			ImPlot::PopColormap();
 			ImGui::EndTable();
@@ -504,34 +507,16 @@ void UI::GetCmd()
 			mtx.lock();
 			cmd = tasks.front();
 			
-			if (temperature1.Add(cmd))
-			{	
-				tasks.pop();
-			}
-			else if (temperature2.Add(cmd))
-			{
-				tasks.pop();
-			}
-			else if (humidity.Add(cmd))
-			{
-				tasks.pop();
-			}
-			else if (current.Add(cmd))
-			{
-				tasks.pop();
-			}
-			else if (voltage.Add(cmd))
-			{
-				tasks.pop();
-			}
-			else if (encoder.Add(cmd))
-			{
-				tasks.pop();
-			}
-			else
-			{
-				tasks.pop(); // force pop of uncorrect cmd
-			}
+			bool processed =
+				temperature1.Add(cmd) ||
+				temperature2.Add(cmd) ||
+				humidity.Add(cmd)     ||
+				current.Add(cmd)      ||
+				voltage.Add(cmd)      ||
+				encoder.Add(cmd)      ||
+				moment.Add(cmd);
+
+			tasks.pop(); 
 			mtx.unlock();
 		}		
 	}
@@ -574,6 +559,10 @@ void UI::PlotTableSensor(Sensor<T>* sensor, const std::string& header, const std
 
 				memset(selected.data(), false, selected.size());
 				selected[colors] = true;
+
+				float new_value = (choosen_sensor->GetSize() > 0) ? choosen_sensor->GetLast() : 0.0f;
+				out_buffer.clear();
+				out_buffer.resize(timer.limit, new_value);
 			}
 			else
 			{
@@ -582,11 +571,6 @@ void UI::PlotTableSensor(Sensor<T>* sensor, const std::string& header, const std
 				memset(selected.data(), false, selected.size());
 				selected[colors] = false;
 			}
-
-			float new_value = (choosen_sensor->GetSize() > 0) ? choosen_sensor->GetLast() : 0.0f;
-			out_buffer.clear();
-			out_buffer.resize(timer.limit, new_value);
-
 		}
 
 		ImGui::PopID();
@@ -619,7 +603,8 @@ void UI::AddLogLine(const std::string& filename)
 
 	oss << stamp << "\t" << GetLast(temperature1) << "\t" << GetLast(temperature2) << "\t" 
 						 << GetLast(humidity)	  << "\t" << GetLast(current)      << "\t" 
-					     << GetLast(voltage)	  << "\t" << GetLast(encoder);
+					     << GetLast(voltage)	  << "\t" << GetLast(encoder)      << "\t"
+						 << GetLast(moment);
 
 	std::ofstream out;
 	out.open("log\\" + filename + "\\" + filename + ".txt", std::ios::app);
@@ -646,7 +631,8 @@ void UI::InitLog(const log_t& log_data) const
 	oss << "Файл отчёта " << log_data.name << " Servo Bench\n";
 	oss << "Дата: " << std::chrono::zoned_time{ std::chrono::current_zone(), std::chrono::system_clock::now() } << "\n";
 	oss << "Период:\t" << log_data.period << "мс\n\n";
-	oss << "Время\t" << "Температура\t" << "Ток\t" << "Напряжение\t\n";
+	oss << "Время\t"     << "Температура 1\t" << "Температура 2\t" 
+		<< "Влажность\t" << "Ток\t"           << "Напряжение\t\n" << "Энкодер\t" << "Момент\t";
 
 	std::ofstream out;
 	out.open("log\\" + log_data.name + "\\" + log_data.name + ".txt");

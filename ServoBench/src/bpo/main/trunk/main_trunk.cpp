@@ -9,6 +9,9 @@
 
 #include "OneWire.h"
 #include "DallasTemperature.h"
+#include <HX711.h>
+
+#include <Servo.h>
 
 typedef unsigned char      uint8_t;
 typedef unsigned long long uint64_t;
@@ -16,6 +19,7 @@ typedef unsigned long long uint64_t;
 #define SPLITTER ":"
 #define OUTPORT(header, data) Serial.println(String(header) + String(SPLITTER) + String(data))
 
+#define _10ms   10    // 10 мс
 #define _100ms  100   // 100 мс
 #define _500ms  500   // 500 мс
 #define _1000ms 1000  // 1000 мс
@@ -25,15 +29,31 @@ typedef unsigned long long uint64_t;
 #define ENC_A 2       // пин энкодера
 #define ENC_B 3       // пин энкодера
 
+#define HX_DT_PIN  53
+#define HX_SCK_PIN 52
+#define HX_FACTOR  1.0f
+#define HX_SCALE   0.035274f
+
+#define SERVO_PIN 4
+
 volatile int encCounter;
 volatile boolean flag, resetFlag;
 volatile byte curState, prevState;
 
+// Температура Пин 24
 bool IsTempOut = false;
-OneWire oneWire(5);
+OneWire oneWire(5); 
 DallasTemperature ds(&oneWire);
 
-DHT dht(6, DHT22);
+// Влажность Пин 26
+DHT dht(6, DHT22);  
+
+// АЦП для датчика момента
+HX711 hx711;
+
+// Сервопривод
+Servo servo;
+int servo_pos = 0;
 
 // Структура диспетчера
 struct dispatch
@@ -107,18 +127,25 @@ void EchoEncoder()
     OUTPORT("E", encCounter / 10);
 }
 
+void EchoADC()
+{
+    OUTPORT("HX", (hx711.get_units(3) * HX_SCALE));
+}
+
 /**********************************/
 
+// Прерывание для энкодера
 void int0() 
 {
     encTick();
 }
 
+
+// Обработка энкодера
 void encTick() 
 {
-    curState = digitalRead(ENC_A) | digitalRead(ENC_B) << 1; 
-    if (resetFlag && curState == 0b11) 
-    {
+    curState = digitalRead(ENC_A) | digitalRead(ENC_B) << 1;
+    if (resetFlag && curState == 0b11) {
         if (prevState == 0b10) encCounter++;
         if (prevState == 0b01) encCounter--;
         resetFlag = 0;
@@ -130,10 +157,17 @@ void encTick()
 
 /* ДИСПЕТЧЕРЫ ЦИКЛОВ */
 
+// Диспетчер 10мс
+void disp_10ms()
+{
+    //EchoEncoder();
+}
+
 // Диспетчер 100мс
 void disp_100ms()
 {
     EchoEncoder();
+    EchoADC();
 }
 
 // Диспетчер 500мс
@@ -160,17 +194,26 @@ void disp_5000ms()
 void setup()
 {
     randomSeed(analogRead(0)); // Debug random seed
-    ds.begin();
-    ds.setResolution(9);
-    dht.begin();
-
-    pinMode(12, OUTPUT);
-    digitalWrite(12, HIGH);
-
+    
     // Настройка порта передачи данных
     Serial.begin(38400);
     Serial.setTimeout(10);
 
+    // Настройка темп. датчиков
+    ds.begin();
+    ds.setResolution(9);
+    
+    // Иниц. датчика влажности
+    dht.begin();
+
+    // Иниц. АЦП для датчика момента
+    hx711.begin(HX_DT_PIN, HX_SCK_PIN);
+    hx711.set_scale(HX_FACTOR);
+    hx711.tare();
+
+    servo.attach(SERVO_PIN);
+
+    // Для энкодера
     attachInterrupt(0, int0, CHANGE);
     attachInterrupt(1, int0, CHANGE);
 
@@ -225,6 +268,11 @@ void setup()
             if (!strcmp(raw.c_str(), "out"))
             {
                 asm volatile("jmp 0x00");
+            }
+            else if (raw[0] == 'S') // Ловим команду на установку серво
+            {
+                servo_pos = raw.substring(2).toInt();
+                servo.writeMicroseconds(servo_pos);
             }
         }
 

@@ -38,6 +38,7 @@ UI::UI()
 	:
 	temperature1("Температура", "T1", -50, 50, 20),
 	temperature2("Температура", "T2", -50, 50, 20),
+	temperature3("Температура", "T3", -50, 50, 20),
 	current("Ток", "C", 0, 5, 20),
 	voltage("Напряжение", "V", 0, 20, 20),
 	encoder("Энкодер", "E", -370, 370, 20),
@@ -334,22 +335,25 @@ void UI::ShowTable()
 			colors = 0;
 			PlotTableSensor(&temperature1, "Температура 1", "°C", "%.2f", colors);
 
-			colors = 1;
+			colors++;
 			PlotTableSensor(&temperature2, "Температура 2", "°C", "%.2f", colors);		
+
+			colors++;
+			PlotTableSensor(&temperature3, "Температура 3", "°C", "%.2f", colors);
 			
-			colors = 2;
+			colors++;
 			PlotTableSensor(&humidity, "Влажность", "%", "%.2f", colors);
 
-			colors = 3;
+			colors++;
 			PlotTableSensor(&current, "Ток", "A", "%.2f", colors);
 
-			colors = 4;
+			colors++;
 			PlotTableSensor(&voltage, "Напряжение", "V", "%.2f", colors);
 
-			colors = 5;
+			colors++;
 			PlotTableSensor(&encoder, "Энкодер", "°", "%.1f", colors);
 
-			colors = 6;
+			colors++;
 			PlotTableSensor(&moment, "Момент", "-", "%.1f", colors);
 
 			ImPlot::PopColormap();
@@ -510,6 +514,7 @@ void UI::GetCmd()
 			bool processed =
 				temperature1.Add(cmd) ||
 				temperature2.Add(cmd) ||
+				temperature3.Add(cmd) ||
 				humidity.Add(cmd)     ||
 				current.Add(cmd)      ||
 				voltage.Add(cmd)      ||
@@ -601,7 +606,7 @@ void UI::AddLogLine(const std::string& filename)
 	std::string stamp = std::to_string(timer.stamps.back());
 	std::replace(stamp.begin(), stamp.end(), '.', ',');
 
-	oss << stamp << "\t" << GetLast(temperature1) << "\t" << GetLast(temperature2) << "\t" 
+	oss << stamp << "\t" << GetLast(temperature1) << "\t" << GetLast(temperature2) << "\t" << GetLast(temperature3) << "\t"
 						 << GetLast(humidity)	  << "\t" << GetLast(current)      << "\t" 
 					     << GetLast(voltage)	  << "\t" << GetLast(encoder)      << "\t"
 						 << GetLast(moment);
@@ -631,8 +636,8 @@ void UI::InitLog(const log_t& log_data) const
 	oss << "Файл отчёта " << log_data.name << " Servo Bench\n";
 	oss << "Дата: " << std::chrono::zoned_time{ std::chrono::current_zone(), std::chrono::system_clock::now() } << "\n";
 	oss << "Период:\t" << log_data.period << "мс\n\n";
-	oss << "Время\t"     << "Температура 1\t" << "Температура 2\t" 
-		<< "Влажность\t" << "Ток\t"           << "Напряжение\t\n" << "Энкодер\t" << "Момент\t";
+	oss << "Время\t"     << "Температура 1\t" << "Температура 2\t" << "Температура 3\t"
+		<< "Влажность\t" << "Ток\t"           << "Напряжение\t\n"  << "Энкодер\t" << "Момент\t";
 
 	std::ofstream out;
 	out.open("log\\" + log_data.name + "\\" + log_data.name + ".txt");

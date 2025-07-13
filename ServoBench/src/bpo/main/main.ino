@@ -35,6 +35,8 @@ typedef unsigned long long uint64_t;
 #define HX_SCALE   0.035274f
 
 #define SERVO_PIN 4
+#define VOLT_PIN  A0
+#define CURR_PIN  A1
 
 volatile int encCounter;
 volatile boolean flag, resetFlag;
@@ -42,11 +44,11 @@ volatile byte curState, prevState;
 
 // Температура Пин 24
 bool IsTempOut = false;
-OneWire oneWire(5); 
+OneWire oneWire(24); 
 DallasTemperature ds(&oneWire);
 
 // Влажность Пин 26
-DHT dht(6, DHT22);  
+DHT dht(26, DHT22);  
 
 // АЦП для датчика момента
 HX711 hx711;
@@ -101,6 +103,7 @@ void EchoTemperature()
     IsTempOut = true;
     OUTPORT("T1", ds.getTempCByIndex(0));
     OUTPORT("T2", ds.getTempCByIndex(1));
+    OUTPORT("T3", dht.readTemperature());
 }
 
 // Функция выдачи данных о влажности
@@ -112,13 +115,15 @@ void EchoHumidity()
 // Функция выдачи данных о напряжении
 void EchoVoltage()
 {
-    OUTPORT("V", GetRandom(8, 22));
+    //OUTPORT("V", GetRandom(8, 22));
+    OUTPORT("V", (analogRead(VOLT_PIN) * 0.0153));
 }
 
 // Функция выдачи данных о токе
 void EchoCurrent()
 {
-    OUTPORT("C", GetRandom(1, 5));
+    //OUTPORT("C", GetRandom(1, 5));
+    OUTPORT("C", (((analogRead(CURR_PIN) * 0.00489) - 2.5) / 0.04));
 }
 
 // Функция выдачи данных энкодера
@@ -195,6 +200,10 @@ void setup()
 {
     randomSeed(analogRead(0)); // Debug random seed
     
+    // Настройка порта передачи данных
+    Serial.begin(38400);
+    Serial.setTimeout(10);
+
     // Настройка темп. датчиков
     ds.begin();
     ds.setResolution(9);
@@ -208,10 +217,6 @@ void setup()
     hx711.tare();
 
     servo.attach(SERVO_PIN);
-
-    // Настройка порта передачи данных
-    Serial.begin(38400);
-    Serial.setTimeout(10);
 
     // Для энкодера
     attachInterrupt(0, int0, CHANGE);
@@ -242,7 +247,7 @@ void setup()
     dispatch dsps[3];
 
     // Эмуляция потоков данных
-    dsps[0] = dispatch(_10ms,   &disp_10ms);
+    dsps[0] = dispatch(_100ms,  &disp_100ms);
     dsps[1] = dispatch(_1000ms, &disp_1000ms);
     dsps[2] = dispatch(_5000ms, &disp_5000ms);
 

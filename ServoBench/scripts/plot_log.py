@@ -18,7 +18,7 @@ def read_file(filename):
 def parse_data(lines):
     """Разбор данных и извлечение значений"""
     # Находим строку с заголовками (ищем строку, содержащую все нужные столбцы)
-    target_headers = ['Время', 'Температура 1', 'Температура 2', 'Влажность', 'Ток', 'Напряжение', 'Энкодер', 'Момент']
+    target_headers = ['Время', 'Температура 1', 'Температура 2', 'Температура 3', 'Влажность', 'Ток', 'Напряжение', 'Энкодер', 'Момент']
     
     for i, line in enumerate(lines):
         if all(header in line for header in target_headers):
@@ -49,7 +49,7 @@ def plot_graph(data, output_path):
     axes = [host] + [host.twinx() for _ in range(3)]
     
     # Цвета для графиков
-    colors = ['blue', 'green', 'red', 'purple', 'orange', 'brown']
+    colors = ['blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue']
     
     # Рисуем каждый график на соответствующей оси
     for i, (name, values) in enumerate(data.items()):

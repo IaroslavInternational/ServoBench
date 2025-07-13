@@ -60,6 +60,7 @@ private:
 private:
 	Sensor<float> temperature1; // Датчик температуры
 	Sensor<float> temperature2; // Датчик температуры
+	Sensor<float> temperature3; // Датчик температуры
 	Sensor<float> current;	    // Датчик тока
 	Sensor<float> voltage;	    // Датчик напряжения
 	Sensor<float> encoder;	    // Датчик энкодер
@@ -69,5 +70,5 @@ private:
 	Sensor<float>*     choosen_sensor = nullptr; // Выбранный датчик для отрисовки на главный график
 	std::vector<float> out_buffer;				 // Буфер данных для отрисовки данных на главный график
 
-	int servo_angle = 0;
+	int servo_angle = 1000;
 };
